@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dabu</title>
+  <style type="text/css">
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background-color: black;
+    }
+
+    #stage {
+      width: 100%;
+      border: 1px solid lightgrey;
+    }
+
+    canvas {
+      width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      position: absolute;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    #bg-layer {
+      z-index: 1;
+    }
+
+    #game-layer {
+      z-index: 2;
+    }
+
+    #ui-layer {
+      z-index: 3;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="stage"></div>
+  <script>
+    "use strict";
+
+    // This is most likely going to be turned into a module,
+    // eventually.
+    (function () {
+      class HashSet {
+        fields
+        hashMap = new Map()
+
+        constructor(fields, iterable) {
+          if (!fields) {
+            throw new Error('fields must be provided')
+          }
+
+          this.fields = fields
+
+          if (iterable) {
+            let contents = iterable.map(o => [this.hash(o), o])
+            this.hashMap = new Map(contents)
+          }
+        }
+
+        add(o) {
+          this.hashMap.set(this.hash(o), o)
+        }
+
+        get(o) {
+          return this.hashMap.get(this.hash(o))
+        }
+
+        delete(o) {
+          this.hashMap.delete(this.hash(o))
+        }
+
+        clear() {
+          this.hashMap.clear()
+        }
+
+        toArray() {
+          return Array.from(this.hashMap.values())
+        }
+
+        has(o) {
+          return this.hashMap.has(this.hash(o));
+        }
+
+        forEach(fun) {
+          let idx = 0
+          this.hashMap.forEach((value) => {
+            fun(value, idx)
+            idx++
+          })
+        }
+
+        get size() {
+          return this.hashMap.size
+        }
+
+        hash(o) {
+          return this.fields.map(f => {
+            if (!o[f]) throw new Error(`field ${f} cannot be empty when used for hash`)
+            return o[f];
+          }).join('#')
+        }
+      }
+
+      class Point {
+        PRECISION = 5
+        PRECISION_FRACTION = Math.pow(10, -1 * Point.PRECISION)
+
+        x; y
+
+        constructor(x, y) {
+          this.x = x
+          this.y = y
+        }
+
+        static at(x, y) {
+          return new Point(x, y)
+        }
+
+        add(p) {
+          return new Point(this.x + p.x, this.y + p.y)
+        }
+
+        multiply(n) {
+          return new Point(this.x * n, this.y * n)
+        }
+
+        divide(n) {
+          return new Point(this.x / n, this.y / n)
+        }
+
+        round(n) {
+          return new Point(Math.round(this.x, precision),
+            Math.round(this.y, precision))
+        }
+
+        equals(p) {
+          return Math.abs(this.x - p.x) < PRECISION_FRACTION &&
+            Math.abs(this.y - p.y) < PRECISION_FRACTION
+        }
+
+        hash() {
+          return Math.round(this.x, PRECISION) + '#' + Math.round(this.y, PRECISION)
+        }
+
+        vertical() {
+          return this.x == 0 && this.y != 0
+        }
+
+        horizontal() {
+          return this.x != 0 && this.y == 0
+        }
+
+        direction() {
+          return this.divide(this)
+        }
+
+        directionName() {
+          if (this.x > 0 && this.y == 0) return 'right'
+          if (this.x < 0 && this.y == 0) return 'left'
+          if (this.x == 0 && this.y > 0) return 'down'
+          if (this.x == 0 && this.y < 0) return 'up'
+          return 'none'
+        }
+      }
+
+      Point.UP = Point.at(0, -1)
+      Point.DOWN = Point.at(0, 1)
+      Point.LEFT = Point.at(-1, 0)
+      Point.RIGHT = Point.at(1, 0)
+
+      class BoundingBox {
+        position; width; height
+
+        constructor(position, width, height) {
+          this.position = position
+          this.width = width
+          this.height = height
+        }
+
+        collides(box2) {
+          let position1 = this.position.round()
+          let position2 = box2.position.round()
+
+          return position1.x < position2.x + box2.width &&
+            position1.x + this.width > position2.x &&
+            position1.y < position2.y + box2.height &&
+            position1.y + this.height > position2.y
+        }
+
+        hash() {
+          return `${this.position.hash()}#${this.width}#${this.height}`
+        }
+      }
+
+      // internal state
+      let keyHandlers = new Map()
+      let clickHandlers = new Map()
+      let bgCanvas
+      let gameCanvas
+      let uiCanvas
+      let oldTimestamp = performance.now()
+      let requestAnimationFrameId
+      let keyUpEvent
+
+      // public state
+      let bgContext
+      let gameContext
+      let uiContext
+      let keys = {}
+      let mouseX
+      let mouseY
+      let mouseButton
+
+      function init(stageParentId, width, height) {
+        setupCanvas(stageParentId, width, height)
+        setupControls()
+      }
+
+      function load(initFunc, renderFunc, opts) {
+        let maxFPS = opts.maxFPS || 60
+
+        if (requestAnimationFrameId) {
+          window.cancelAnimationFrame(requestAnimationFrameId)
+        }
+
+        clearCanvas()
+
+        initFunc(getContext())
+
+        let gameLoop = timestamp => {
+          // Keep requesting new frames
+          requestAnimationFrameId = window.requestAnimationFrame(gameLoop)
+
+          // Skip frame drawing if not enough time has passed
+          if (timestamp < oldTimestamp + (1000 / maxFPS)) return
+
+          // Calculate the number of seconds passed since the last frame
+          // with a maximum of 0.1 second.
+          let secondsPassed = Math.min(0.1, (timestamp - oldTimestamp) / 1000)
+          oldTimestamp = timestamp
+
+          gameContext.clearRect(0, 0, gameCanvas.width, gameCanvas.height)
+          uiContext.clearRect(0, 0, uiCanvas.width, uiCanvas.height)
+
+          renderFunc(getContext(), secondsPassed)
+        }
+
+        requestAnimationFrameId = window.requestAnimationFrame(gameLoop)
+      }
+
+      function setupCanvas(stageParentId, width, height) {
+        let document = window.document
+        let parent = document.getElementById(stageParentId)
+
+        bgCanvas = document.createElement('canvas')
+        bgCanvas.setAttribute('id', 'bg-layer')
+        bgCanvas.setAttribute('width', width)
+        bgCanvas.setAttribute('height', height)
+        gameCanvas = document.createElement('canvas')
+        gameCanvas.setAttribute('id', 'game-layer')
+        gameCanvas.setAttribute('width', width)
+        gameCanvas.setAttribute('height', height)
+        uiCanvas = document.createElement('canvas')
+        uiCanvas.setAttribute('id', 'ui-layer')
+        uiCanvas.setAttribute('width', width)
+        uiCanvas.setAttribute('height', height)
+
+        parent.appendChild(bgCanvas)
+        parent.appendChild(gameCanvas)
+        parent.appendChild(uiCanvas)
+
+        bgContext = bgCanvas.getContext('2d')
+        gameContext = gameCanvas.getContext('2d')
+        uiContext = uiCanvas.getContext('2d')
+      }
+
+      function clearCanvas() {
+        bgContext.clearRect(0, 0, bgCanvas.width, bgCanvas.height)
+        gameContext.clearRect(0, 0, gameCanvas.width, gameCanvas.height)
+        uiContext.clearRect(0, 0, uiCanvas.width, uiCanvas.height)
+      }
+
+      function setupControls() {
+        window.addEventListener('keydown', e => {
+          // disable key repeating
+          if (keys[e.key]) return
+
+          let key = keyHandlers.has(e.key) ? e.key : 'any'
+          keyUpEvent = keyHandlers.get(key)
+
+          keys[e.key] = true
+        })
+
+        window.addEventListener('keyup', e => {
+          if (keyUpEvent) {
+            keyUpEvent.callback()
+            keyUpEvent = null
+          }
+
+          keys[e.key] = false
+        })
+
+        window.addEventListener('blur', e => {
+          keys = {}
+        })
+
+        window.addEventListener('unload', e => {
+          keys = {}
+        })
+
+        window.addEventListener("mousemove", e => {
+          let [cx, cy] = translateToCanvasPosition(e.clientX, e.clientY)
+
+          mouseX = cx
+          mouseY = cy
+        });
+
+        window.addEventListener('click', e => {
+          clickHandlers.forEach(({ box, callback }, key) => {
+            if (mouseX >= box.position.x && mouseX < box.position.x + box.width &&
+              mouseY >= box.position.y && mouseY < box.position.y + box.height) {
+              callback()
+            }
+          })
+        })
+
+        window.addEventListener("mousedown", e => {
+          mouseButton = true;
+        })
+
+        window.addEventListener("mouseup", e => {
+          mouseButton = false;
+        })
+      }
+
+      function translateToCanvasPosition(x, y) {
+        let cx, cy
+        let canvasRatio = gameCanvas.width / gameCanvas.height
+        let fullWidth = gameCanvas.scrollWidth
+        let realHeight = gameCanvas.scrollHeight
+        let realWidth = realHeight * canvasRatio
+        let xOffset = (fullWidth - realWidth) / 2
+
+        let relativeX = x - (gameCanvas.offsetLeft + xOffset)
+        if (relativeX <= 0) {
+          cx = 0
+        } else if (relativeX > 0 && relativeX < realWidth) {
+          cx = Math.round((relativeX / realWidth) * gameCanvas.width)
+        } else {
+          cx = gameCanvas.width
+        }
+
+        let relativeY = y - gameCanvas.offsetTop
+        if (relativeY <= 0) {
+          cy = 0
+        } if (relativeY > 0 && relativeY < realHeight) {
+          cy = Math.round((relativeY / realHeight) * gameCanvas.height)
+        } else {
+          cy = gameCanvas.height
+        }
+
+        return [cx, cy]
+      }
+
+      function getContext() {
+        return {
+          bgContext: bgContext,
+          gameContext: gameContext,
+          uiContext: uiContext,
+          keys: keys,
+          mouseX: mouseX,
+          mouseY: mouseY,
+          mouseButton: mouseButton
+        }
+      }
+
+      window.Dabu = {
+        // Utility classes
+        Point: Point,
+        HashSet: HashSet,
+        BoundingBox: BoundingBox,
+
+        // Public API
+        init: init,
+        load: load
+      }
+    })()
+  </script>
+  <script>
+    "use strict"
+
+    const { Point } = Dabu;
+
+    const COLOR = '#43523d'
+    const WIDTH = 80
+    const HEIGHT = 48
+    const MAX_SPEED = 30
+
+    let position = Point.at(4, 4)
+    let speed = 0
+    let direction = Point.DOWN
+
+    Dabu.init('stage', WIDTH, HEIGHT)
+
+    Dabu.load(
+      ctx => {
+        ctx.bgContext.fillStyle = '#c7f0d8'
+        ctx.bgContext.fillRect(0, 0, WIDTH, HEIGHT)
+      },
+      (ctx, secondsPassed) => {
+        if (ctx.keys.ArrowLeft || ctx.keys.ArrowRight || ctx.keys.ArrowUp || ctx.keys.ArrowDown) {
+          speed = MAX_SPEED
+
+          if (ctx.keys.ArrowUp) direction = Point.UP
+          else if (ctx.keys.ArrowDown) direction = Point.DOWN
+          else if (ctx.keys.ArrowLeft) direction = Point.LEFT
+          else direction = Point.RIGHT
+        } else {
+          speed = 0
+        }
+
+        position = position.add(direction.multiply(speed * secondsPassed))
+
+        ctx.gameContext.fillStyle = COLOR
+        ctx.gameContext.fillRect(Math.floor(position.x), Math.floor(position.y), 4, 4)
+      },
+      { maxFPS: 15 }
+    )
+
+  </script>
+</body>
+
+</html>
