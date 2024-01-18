@@ -434,19 +434,23 @@
       }
 
       function drawEntity({ position, sprite }) {
-        let { x, y } = position.round()
-        let sprites = ctx.sprites[sprite.name]
-        let spriteFrame
-
-        if (sprites instanceof Array) {
-          let msPerFrame = 1000 / sprite.fps
-          let frame = Math.floor(((performance.now() - sprite.timestamp) / msPerFrame)) % sprites.length
-          spriteFrame = sprites[frame]
+        if (sprite instanceof Function) {
+          sprite(position.round())
         } else {
-          spriteFrame = sprites
-        }
+          let { x, y } = position.round()
+          let sprites = ctx.sprites[sprite.name]
+          let spriteFrame
 
-        ctx.gameContext.drawImage(spriteFrame, x, y)
+          if (sprites instanceof Array) {
+            let msPerFrame = 1000 / sprite.fps
+            let frame = Math.floor(((performance.now() - sprite.timestamp) / msPerFrame)) % sprites.length
+            spriteFrame = sprites[frame]
+          } else {
+            spriteFrame = sprites
+          }
+
+          ctx.gameContext.drawImage(spriteFrame, x, y)
+        }
       }
 
       window.Dabu = {
@@ -472,7 +476,7 @@
   <script>
     "use strict"
 
-    const { Point, SpriteSheet, Sprite, ctx } = Dabu;
+    const { Point, SpriteSheet, Sprite, BoundingBox, ctx } = Dabu;
 
     const MAX_FPS = 30
     const COLOR = '#43523d'
@@ -485,14 +489,25 @@
     }
 
     class Player {
-      position
+      #position
       #direction = Point.DOWN
       #velocity = 0
       #sprite
+      collisionShape
 
       constructor(position) {
-        this.position = position
+        this.#position = position
+        this.collisionShape = new BoundingBox(position, 8, 8)
         this.update()
+      }
+
+      get position() {
+        return this.#position
+      }
+
+      set position(position) {
+        this.#position = position
+        this.collisionShape.position = position
       }
 
       get direction() {
@@ -525,6 +540,35 @@
       }
     }
 
+    class StaticEntity {
+      position
+      sprite
+      collisionShape
+
+      constructor(position, sprite, collisionShape) {
+        this.position = position
+        this.sprite = sprite
+        this.collisionShape = collisionShape
+      }
+    }
+
+    class Box extends StaticEntity {
+      constructor(position, width, height) {
+        super(
+          position,
+          Box.spriteFunc(width, height),
+          new BoundingBox(position, width, height)
+        )
+      }
+
+      static spriteFunc(width, height) {
+        return ({ x, y }) => {
+          ctx.gameContext.fillStyle = COLOR
+          ctx.gameContext.fillRect(x, y, width, height)
+        }
+      }
+    }
+
     Dabu.loadImage('sprite1', 'sprite1.png')
     Dabu.loadSprite('player_walk_right', 'sprite1', Point.at(0, 0), 8, 8, { count: 4 })
     Dabu.loadSprite('player_stand_right', 'sprite1', Point.at(8, 0), 8, 8)
@@ -543,11 +587,12 @@
         ctx.bgContext.fillRect(0, 0, WIDTH, HEIGHT)
 
         let player = new Player(Point.at(4, 4))
+        let box = new Box(Point.at(40, 10), 16, 8)
 
-        return { player: player }
+        return { player: player, box: box }
       },
       (state, secondsPassed) => {
-        let { player } = state
+        let { player, box } = state
 
         if (ctx.keys.ArrowLeft || ctx.keys.ArrowRight || ctx.keys.ArrowUp || ctx.keys.ArrowDown) {
           player.velocity = MAX_VELOCITY
@@ -562,8 +607,17 @@
 
         player.position = player.position.add(player.direction.multiply(player.velocity * secondsPassed))
 
+        if (player.collisionShape.collides(box.collisionShape)) {
+          let { position: cp, width, height } = box.collisionShape
+          if (player.direction == Point.UP) player.position = Point.at(player.position.x, cp.y + height)
+          else if (player.direction == Point.DOWN) player.position = Point.at(player.position.x, cp.y - player.collisionShape.height)
+          else if (player.direction == Point.LEFT) player.position = Point.at(cp.x + width, player.position.y)
+          else player.position = Point.at(cp.x - player.collisionShape.width, player.position.y)
+        }
+
         Dabu.clearScreen()
         Dabu.drawEntity(player)
+        Dabu.drawEntity(box)
       },
       { maxFPS: MAX_FPS }
     )
