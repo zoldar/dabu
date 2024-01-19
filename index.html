@@ -467,6 +467,30 @@
         return [cx, cy]
       }
 
+      function runPhysics({ entities }) {
+        Object.entries(entities).forEach(([key, entity]) => {
+          if (entity instanceof DynamicEntity && entity.collisionShape && entity.velocity > 0) {
+            let { position: ePos, width: eWidth, height: eHeight } = entity.collisionShape
+            let resX = ePos.x, resY = ePos.y
+            Object.entries(entities).forEach(([otherKey, otherEntity]) => {
+              if (otherEntity.collisionShape &&
+                key != otherKey &&
+                entity.collisionShape.collides(otherEntity.collisionShape)) {
+                let { position: oPos, width: oWidth, height: oHeight } = otherEntity.collisionShape
+
+                if (entity.direction.y < 0) resY = oPos.y + oHeight
+                else if (entity.direction.y > 0) resY = oPos.y - eHeight
+
+                if (entity.direction.x < 0) resX = oPos.x + oWidth
+                else if (entity.direction.x > 0) resX = oPos.x - eWidth
+
+              }
+            })
+            entity.position = Point.at(resX, resY).subtract(entity.collisionShape.offset)
+          }
+        })
+      }
+
       function clearScreen() {
         ctx.gameContext.clearRect(0, 0, gameCanvas.width, gameCanvas.height)
       }
@@ -547,6 +571,7 @@
         load,
         clearScreen,
         drawScene,
+        runPhysics,
 
         // Public context
         ctx
@@ -630,12 +655,13 @@
         let scene = new Scene()
 
         scene.entities.player = new Player(Point.at(4, 4))
-        scene.entities.box = new Box(Point.at(40, 10), 16, 8)
+        scene.entities.box1 = new Box(Point.at(40, 10), 16, 8)
+        scene.entities.box2 = new Box(Point.at(30, 24), 16, 8)
 
         return scene
       },
       (scene, secondsPassed) => {
-        let { player, box } = scene.entities
+        let { player } = scene.entities
 
         if (ctx.keys.ArrowLeft || ctx.keys.ArrowRight || ctx.keys.ArrowUp || ctx.keys.ArrowDown) {
           player.velocity = MAX_VELOCITY
@@ -650,20 +676,7 @@
 
         player.position = player.position.add(player.direction.multiply(player.velocity * secondsPassed))
 
-        if (player.collisionShape.collides(box.collisionShape)) {
-          let { position: pp, width: pw, height: ph } = player.collisionShape
-          let { position: bp, width: bw, height: bh } = box.collisionShape
-          let cx = pp.x, cy = pp.y
-
-          if (player.direction.y < 0) cy = bp.y + bh
-          else if (player.direction.y > 0) cy = bp.y - ph
-
-          if (player.direction.x < 0) cx = bp.x + bw
-          else if (player.direction.x > 0) cx = bp.x - pw
-
-          player.position = Point.at(cx, cy).subtract(player.collisionShape.offset)
-        }
-
+        Dabu.runPhysics(scene)
         Dabu.drawScene(scene)
       },
       { maxFPS: MAX_FPS }
