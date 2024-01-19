@@ -33,6 +33,7 @@
     const MAX_VELOCITY = 15
 
     class Player extends DynamicEntity {
+      zindex = 1
       constructor(position) {
         super(position)
         this.collisionShape = new BoundingBox(position, Point.at(2, 1), 4, 5)
@@ -67,6 +68,22 @@
       }
     }
 
+    class Wall extends StaticEntity {
+      constructor(position) {
+        super(
+          position,
+          new Sprite('wall'),
+          new BoundingBox(position, Point.at(0, 0), 8, 8)
+        )
+      }
+    }
+
+    class Grass extends StaticEntity {
+      constructor(position) {
+        super(position, new Sprite('grass'))
+      }
+    }
+
     Dabu.loadImage('sprite1', 'sprite1.png')
     Dabu.loadSprite('player_walk_right', 'sprite1', Point.at(0, 0), 8, 8, { count: 4 })
     Dabu.loadSprite('player_stand_right', 'sprite1', Point.at(8, 0), 8, 8)
@@ -76,6 +93,8 @@
     Dabu.loadSprite('player_stand_up', 'sprite1', Point.at(8, 8), 8, 8)
     Dabu.loadSprite('player_walk_down', 'sprite1', Point.at(32, 8), 8, 8, { count: 4 })
     Dabu.loadSprite('player_stand_down', 'sprite1', Point.at(40, 8), 8, 8)
+    Dabu.loadSprite('wall', 'sprite1', Point.at(0, 16), 8, 8)
+    Dabu.loadSprite('grass', 'sprite1', Point.at(8, 16), 8, 8)
 
     Dabu.init('stage', WIDTH, HEIGHT)
 
@@ -86,9 +105,22 @@
 
         let scene = new Scene()
 
-        scene.entities.player = new Player(Point.at(4, 4))
+        scene.entities.player = new Player(Point.at(10, 40))
         scene.entities.box1 = new Box(Point.at(40, 10), 16, 8)
-        scene.entities.box2 = new Box(Point.at(30, 24), 16, 8)
+        scene.entities.box2 = new Box(Point.at(50, 18), 8, 16)
+        scene.entities.wall1 = new Wall(Point.at(0, 0))
+        scene.entities.wall2 = new Wall(Point.at(0, 8))
+        scene.entities.wall3 = new Wall(Point.at(0, 16))
+        scene.entities.wall4 = new Wall(Point.at(0, 24))
+        scene.entities.wall5 = new Wall(Point.at(8, 0))
+        scene.entities.wall7 = new Wall(Point.at(16, 0))
+        scene.entities.wall8 = new Wall(Point.at(24, 0))
+        scene.entities.wall9 = new Wall(Point.at(16, 16))
+        scene.entities.grass1 = new Grass(Point.at(8, 8))
+        scene.entities.grass2 = new Grass(Point.at(8, 16))
+        scene.entities.grass3 = new Grass(Point.at(8, 24))
+        scene.entities.grass4 = new Grass(Point.at(16, 8))
+        scene.entities.grass5 = new Grass(Point.at(24, 8))
 
         return scene
       },

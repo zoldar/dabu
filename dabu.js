@@ -199,6 +199,7 @@
     _velocity = 0
     sprite
     collisionShape
+    zindex = 0
 
     constructor(position) {
       this._position = position
@@ -241,6 +242,7 @@
     position
     sprite
     collisionShape
+    zindex = 0
 
     constructor(position, sprite, collisionShape) {
       this.position = position
@@ -488,7 +490,13 @@
 
   function drawScene(scene) {
     clearScreen()
-    Object.values(scene.entities).forEach(entity => drawEntity(entity))
+    Object.values(
+      scene.entities
+    ).toSorted(
+      (e1, e2) => e1.zindex - e2.zindex
+    ).forEach(
+      entity => drawEntity(entity)
+    )
   }
 
   function drawEntity({ position, sprite }) {
