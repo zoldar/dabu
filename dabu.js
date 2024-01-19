@@ -138,8 +138,12 @@
     groups = {}
     entities = {}
 
+    has(e) {
+      return this.entities[this.hash(e)] !== undefined
+    }
+
     add(e, group) {
-      let hash = e.hash ? e.hash() : this.hash(e)
+      let hash = this.hash(e)
       this.entities[hash] = e
 
       if (group) {
@@ -155,7 +159,15 @@
       }
     }
 
+    remove(e) {
+      let hash = this.hash(e)
+      Object.values(this.groups).forEach(g => g.delete(hash))
+      delete this.entities[hash]
+    }
+
     hash(e) {
+      if (e.hash) return e.hash()
+
       return e.constructor.name + '#' + e.position.x + '#' + e.position.y
     }
   }
@@ -291,6 +303,7 @@
     images: {},
     sprites: {},
     keys: {},
+    signals: {},
     mouseX: 0,
     mouseY: 0,
     mouseButton: false,
@@ -549,6 +562,14 @@
     }
   }
 
+  function sendSignal(name, arg) {
+    if (ctx.signals[name]) {
+      ctx.signals[name].push(arg)
+    } else {
+      ctx.signals[name] = [arg]
+    }
+  }
+
   window.Dabu = {
     // Utility classes
     Point,
@@ -568,6 +589,7 @@
     clearScreen,
     drawScene,
     runPhysics,
+    sendSignal,
 
     // Public context
     ctx

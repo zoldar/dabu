@@ -91,13 +91,43 @@
 
     class Bomb extends StaticEntity {
       zindex = 1
+      pendingExplosion
 
       constructor(position) {
         super(
           position,
-          new Sprite('bomb_pulsing', 3),
-          new BoundingBox(position, Point.at(2, 2), 4, 4)
+          new Sprite('bomb_pulsing', 3)
         )
+      }
+
+      start(time) {
+        this.pendingExplosion = setTimeout(() => {
+          Dabu.sendSignal('explode', this)
+        }, time)
+      }
+    }
+
+    class Crate extends StaticEntity {
+      zindex = 1
+
+      constructor(position) {
+        super(
+          position,
+          new Sprite('crate'),
+          new BoundingBox(position, Point.at(0, 0), 8, 8)
+        )
+      }
+    }
+
+    function dropBomb(scene) {
+      let { player } = scene.entities
+      let x = Math.round(player.position.x / 8) * 8
+      let y = Math.round(player.position.y / 8) * 8
+      let bomb = new Bomb(Point.at(x, y))
+
+      if (!scene.has(bomb)) {
+        scene.add(bomb, 'bombs')
+        bomb.start(3000)
       }
     }
 
@@ -115,6 +145,7 @@
     Dabu.loadSprite('bomb1', 'sprite1', Point.at(16, 16), 8, 8)
     Dabu.loadSprite('bomb2', 'sprite1', Point.at(24, 16), 8, 8)
     Dabu.loadSprite('bomb3', 'sprite1', Point.at(32, 16), 8, 8)
+    Dabu.loadSprite('crate', 'sprite1', Point.at(40, 16), 8, 8)
     Dabu.defineSprite('bomb_pulsing', ['bomb2', 'bomb3', 'bomb2', 'bomb1'])
 
     Dabu.init('stage', WIDTH, HEIGHT)
@@ -142,8 +173,7 @@
         scene.add(new Grass(Point.at(8, 24)), 'walls')
         scene.add(new Grass(Point.at(16, 8)), 'walls')
         scene.add(new Grass(Point.at(24, 8)), 'walls')
-        scene.add(new Bomb(Point.at(8, 8)), 'bombs')
-        scene.add(new Bomb(Point.at(8, 32)), 'bombs')
+        scene.add(new Crate(Point.at(24, 8)), 'crates')
 
         return scene
       },
@@ -161,7 +191,19 @@
           player.velocity = 0
         }
 
+        if (ctx.keys[' ']) {
+          dropBomb(scene)
+          ctx.keys[' '] = false
+        }
+
         player.position = player.position.add(player.direction.multiply(player.velocity * secondsPassed))
+
+        if (ctx.signals.explode) {
+          ctx.signals.explode.forEach(bomb => {
+            scene.remove(bomb)
+          })
+          ctx.signals.explode = []
+        }
 
         Dabu.runPhysics(scene)
         Dabu.drawScene(scene)
