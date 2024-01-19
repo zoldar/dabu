@@ -135,11 +135,24 @@
   Point.RIGHT = Point.at(1, 0)
 
   class Scene {
+    groups = {}
     entities = {}
 
-    add(e) {
+    add(e, group) {
       let hash = e.hash ? e.hash() : this.hash(e)
       this.entities[hash] = e
+
+      if (group) {
+        let groups = group instanceof Array ? group : [group]
+
+        groups.forEach(g => {
+          if (this.groups[g]) {
+            this.groups[g].add(hash)
+          } else {
+            this.groups[g] = new Set([hash])
+          }
+        })
+      }
     }
 
     hash(e) {
