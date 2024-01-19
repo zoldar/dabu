@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dabu</title>
+  <link href="../../dabu.css" rel="stylesheet" />
+  <script src="../../dabu.js"></script>
+</head>
+
+<body>
+  <div id="stage"></div>
+  <script>
+    "use strict"
+
+    // library "imports"
+    const {
+      Point,
+      Sprite,
+      Scene,
+      BoundingBox,
+      DynamicEntity,
+      StaticEntity,
+      ctx
+    } = Dabu;
+
+    const MAX_FPS = 30
+    const BG_COLOR = '#c7f0d8'
+    const COLOR = '#43523d'
+    const WIDTH = 80
+    const HEIGHT = 48
+    const MAX_VELOCITY = 15
+
+    class Player extends DynamicEntity {
+      constructor(position) {
+        super(position)
+        this.collisionShape = new BoundingBox(position, Point.at(2, 1), 4, 5)
+      }
+
+      update() {
+        let velocityStr = this._velocity > 0 ? 'walk' : 'stand'
+        let name = 'player_' + velocityStr + '_' + this._direction.directionName()
+
+        if (!this.sprite) {
+          this.sprite = new Sprite(name)
+        } else {
+          this.sprite.name = name
+        }
+      }
+    }
+
+    class Box extends StaticEntity {
+      constructor(position, width, height) {
+        super(
+          position,
+          Box.spriteFunc(width, height),
+          new BoundingBox(position, Point.at(0, 0), width, height)
+        )
+      }
+
+      static spriteFunc(width, height) {
+        return ({ x, y }) => {
+          ctx.gameContext.fillStyle = COLOR
+          ctx.gameContext.fillRect(x, y, width, height)
+        }
+      }
+    }
+
+    Dabu.loadImage('sprite1', 'sprite1.png')
+    Dabu.loadSprite('player_walk_right', 'sprite1', Point.at(0, 0), 8, 8, { count: 4 })
+    Dabu.loadSprite('player_stand_right', 'sprite1', Point.at(8, 0), 8, 8)
+    Dabu.loadSprite('player_walk_left', 'sprite1', Point.at(32, 0), 8, 8, { count: 4 })
+    Dabu.loadSprite('player_stand_left', 'sprite1', Point.at(40, 0), 8, 8)
+    Dabu.loadSprite('player_walk_up', 'sprite1', Point.at(0, 8), 8, 8, { count: 4 })
+    Dabu.loadSprite('player_stand_up', 'sprite1', Point.at(8, 8), 8, 8)
+    Dabu.loadSprite('player_walk_down', 'sprite1', Point.at(32, 8), 8, 8, { count: 4 })
+    Dabu.loadSprite('player_stand_down', 'sprite1', Point.at(40, 8), 8, 8)
+
+    Dabu.init('stage', WIDTH, HEIGHT)
+
+    Dabu.load(
+      () => {
+        ctx.bgContext.fillStyle = BG_COLOR
+        ctx.bgContext.fillRect(0, 0, WIDTH, HEIGHT)
+
+        let scene = new Scene()
+
+        scene.entities.player = new Player(Point.at(4, 4))
+        scene.entities.box1 = new Box(Point.at(40, 10), 16, 8)
+        scene.entities.box2 = new Box(Point.at(30, 24), 16, 8)
+
+        return scene
+      },
+      (scene, secondsPassed) => {
+        let { player } = scene.entities
+
+        if (ctx.keys.ArrowLeft || ctx.keys.ArrowRight || ctx.keys.ArrowUp || ctx.keys.ArrowDown) {
+          player.velocity = MAX_VELOCITY
+
+          if (ctx.keys.ArrowUp) player.direction = Point.UP
+          else if (ctx.keys.ArrowDown) player.direction = Point.DOWN
+          else if (ctx.keys.ArrowLeft) player.direction = Point.LEFT
+          else player.direction = Point.RIGHT
+        } else {
+          player.velocity = 0
+        }
+
+        player.position = player.position.add(player.direction.multiply(player.velocity * secondsPassed))
+
+        Dabu.runPhysics(scene)
+        Dabu.drawScene(scene)
+      },
+      { maxFPS: MAX_FPS }
+    )
+  </script>
+</body>
+
+</html>
