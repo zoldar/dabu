@@ -136,6 +136,15 @@
 
   class Scene {
     entities = {}
+
+    add(e) {
+      let hash = e.hash ? e.hash() : this.hash(e)
+      this.entities[hash] = e
+    }
+
+    hash(e) {
+      return e.constructor.name + '#' + e.position.x + '#' + e.position.y
+    }
   }
 
   class BoundingBox {
@@ -192,7 +201,6 @@
       return this.#name
     }
   }
-
   class DynamicEntity {
     _position
     _direction = Point.DOWN
@@ -254,6 +262,7 @@
   // internal state
   let imagePromises = []
   let spritePromises = []
+  let definedSprites = []
   let keyHandlers = new Map()
   let clickHandlers = new Map()
   let bgCanvas
@@ -312,6 +321,8 @@
     }).then(() => {
       return Promise.all(spritePromises.map(p => p()))
     }).then(() => {
+      definedSprites.forEach(cb => cb())
+
       requestAnimationFrameId = window.requestAnimationFrame(gameLoop)
     })
   }
@@ -488,6 +499,12 @@
     }))
   }
 
+  function defineSprite(name, spriteNames) {
+    definedSprites.push(() => {
+      ctx.sprites[name] = spriteNames.map(n => ctx.sprites[n])
+    })
+  }
+
   function drawScene(scene) {
     clearScreen()
     Object.values(
@@ -532,6 +549,7 @@
     // Public API
     loadImage,
     loadSprite,
+    defineSprite,
     init,
     load,
     clearScreen,
