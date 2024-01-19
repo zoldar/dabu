@@ -3,67 +3,6 @@
 // This is most likely going to be turned into a module,
 // eventually.
 (function () {
-  class HashSet {
-    fields
-    hashMap = new Map()
-
-    constructor(fields, iterable) {
-      if (!fields) {
-        throw new Error('fields must be provided')
-      }
-
-      this.fields = fields
-
-      if (iterable) {
-        let contents = iterable.map(o => [this.hash(o), o])
-        this.hashMap = new Map(contents)
-      }
-    }
-
-    add(o) {
-      this.hashMap.set(this.hash(o), o)
-    }
-
-    get(o) {
-      return this.hashMap.get(this.hash(o))
-    }
-
-    delete(o) {
-      this.hashMap.delete(this.hash(o))
-    }
-
-    clear() {
-      this.hashMap.clear()
-    }
-
-    toArray() {
-      return Array.from(this.hashMap.values())
-    }
-
-    has(o) {
-      return this.hashMap.has(this.hash(o));
-    }
-
-    forEach(fun) {
-      let idx = 0
-      this.hashMap.forEach((value) => {
-        fun(value, idx)
-        idx++
-      })
-    }
-
-    get size() {
-      return this.hashMap.size
-    }
-
-    hash(o) {
-      return this.fields.map(f => {
-        if (!o[f]) throw new Error(`field ${f} cannot be empty when used for hash`)
-        return o[f];
-      }).join('#')
-    }
-  }
-
   class Point {
     PRECISION = 5
     PRECISION_FRACTION = Math.pow(10, -5)
