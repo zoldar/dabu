@@ -236,6 +236,62 @@
         }
       }
 
+      class DynamicEntity {
+        _position
+        _direction = Point.DOWN
+        _velocity = 0
+        sprite
+        collisionShape
+
+        constructor(position) {
+          this._position = position
+          this.update()
+
+          // extending class must provide collisionShape and sprite
+        }
+
+        get position() {
+          return this._position
+        }
+
+        set position(position) {
+          this._position = position
+          this.collisionShape.position = position
+        }
+
+        get direction() {
+          return this._direction
+        }
+
+        set direction(direction) {
+          this._direction = direction
+          this.update()
+        }
+
+        get velocity() {
+          return this._velocity
+        }
+
+        set velocity(velocity) {
+          this._velocity = velocity
+          this.update()
+        }
+
+        update() { }
+      }
+
+      class StaticEntity {
+        position
+        sprite
+        collisionShape
+
+        constructor(position, sprite, collisionShape) {
+          this.position = position
+          this.sprite = sprite
+          this.collisionShape = collisionShape
+        }
+      }
+
       // internal state
       let imagePromises = []
       let spritePromises = []
@@ -476,29 +532,41 @@
 
       window.Dabu = {
         // Utility classes
-        Point: Point,
-        HashSet: HashSet,
-        BoundingBox: BoundingBox,
-        Scene: Scene,
-        Sprite: Sprite,
+        Point,
+        HashSet,
+        BoundingBox,
+        Scene,
+        Sprite,
+        StaticEntity,
+        DynamicEntity,
 
         // Public API
-        loadImage: loadImage,
-        loadSprite: loadSprite,
-        init: init,
-        load: load,
-        clearScreen: clearScreen,
-        drawScene: drawScene,
+        loadImage,
+        loadSprite,
+        init,
+        load,
+        clearScreen,
+        drawScene,
 
         // Public context
-        ctx: ctx
+        ctx
       }
     })()
   </script>
   <script>
     "use strict"
 
-    const { Point, SpriteSheet, Scene, Sprite, BoundingBox, ctx } = Dabu;
+    // library "imports"
+    const {
+      Point,
+      SpriteSheet,
+      Scene,
+      Sprite,
+      BoundingBox,
+      DynamicEntity,
+      StaticEntity,
+      ctx
+    } = Dabu;
 
     const MAX_FPS = 30
     const BG_COLOR = '#c7f0d8'
@@ -507,67 +575,21 @@
     const HEIGHT = 48
     const MAX_VELOCITY = 15
 
-    class Player {
-      #position
-      #direction = Point.DOWN
-      #velocity = 0
-      #sprite
-      collisionShape
-
+    class Player extends DynamicEntity {
       constructor(position) {
-        this.#position = position
+        super(position)
         this.collisionShape = new BoundingBox(position, Point.at(2, 1), 4, 5)
-        this.update()
-      }
-
-      get position() {
-        return this.#position
-      }
-
-      set position(position) {
-        this.#position = position
-        this.collisionShape.position = position
-      }
-
-      get direction() {
-        return this.#direction
-      }
-
-      set direction(direction) {
-        this.#direction = direction
-        this.update()
-      }
-
-      get velocity() {
-        return this.#velocity
-      }
-
-      set velocity(velocity) {
-        this.#velocity = velocity
-        this.update()
       }
 
       update() {
-        let velocityStr = this.#velocity > 0 ? 'walk' : 'stand'
-        let name = 'player_' + velocityStr + '_' + this.#direction.directionName()
+        let velocityStr = this._velocity > 0 ? 'walk' : 'stand'
+        let name = 'player_' + velocityStr + '_' + this._direction.directionName()
 
         if (!this.sprite) {
           this.sprite = new Sprite(name)
         } else {
           this.sprite.name = name
         }
-      }
-    }
-
-    class StaticEntity {
-      position
-      sprite
-      collisionShape
-
-      constructor(position, sprite, collisionShape) {
-        this.position = position
-        this.sprite = sprite
-        this.collisionShape = collisionShape
       }
     }
 
