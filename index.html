@@ -109,7 +109,7 @@
 
       class Point {
         PRECISION = 5
-        PRECISION_FRACTION = Math.pow(10, -1 * Point.PRECISION)
+        PRECISION_FRACTION = Math.pow(10, -5)
 
         x; y
 
@@ -124,6 +124,10 @@
 
         add(p) {
           return new Point(this.x + p.x, this.y + p.y)
+        }
+
+        subtract(p) {
+          return new Point(this.x - p.x, this.y - p.y)
         }
 
         multiply(n) {
@@ -173,13 +177,29 @@
       Point.LEFT = Point.at(-1, 0)
       Point.RIGHT = Point.at(1, 0)
 
-      class BoundingBox {
-        position; width; height
+      class Scene {
+        entities = {}
+      }
 
-        constructor(position, width, height) {
-          this.position = position
+      class BoundingBox {
+        #position
+        offset
+        width
+        height
+
+        constructor(position, offset, width, height) {
+          this.offset = offset
+          this.#position = position.round().add(offset)
           this.width = width
           this.height = height
+        }
+
+        set position(position) {
+          this.#position = position.round().add(this.offset)
+        }
+
+        get position() {
+          return this.#position
         }
 
         collides(box2) {
@@ -190,10 +210,6 @@
             position1.x + this.width > position2.x &&
             position1.y < position2.y + box2.height &&
             position1.y + this.height > position2.y
-        }
-
-        hash() {
-          return `${this.position.hash()}#${this.width}#${this.height}`
         }
       }
 
@@ -433,6 +449,11 @@
         }))
       }
 
+      function drawScene(scene) {
+        clearScreen()
+        Object.values(scene.entities).forEach(entity => drawEntity(entity))
+      }
+
       function drawEntity({ position, sprite }) {
         if (sprite instanceof Function) {
           sprite(position.round())
@@ -458,6 +479,7 @@
         Point: Point,
         HashSet: HashSet,
         BoundingBox: BoundingBox,
+        Scene: Scene,
         Sprite: Sprite,
 
         // Public API
@@ -466,7 +488,7 @@
         init: init,
         load: load,
         clearScreen: clearScreen,
-        drawEntity: drawEntity,
+        drawScene: drawScene,
 
         // Public context
         ctx: ctx
@@ -476,17 +498,14 @@
   <script>
     "use strict"
 
-    const { Point, SpriteSheet, Sprite, BoundingBox, ctx } = Dabu;
+    const { Point, SpriteSheet, Scene, Sprite, BoundingBox, ctx } = Dabu;
 
     const MAX_FPS = 30
+    const BG_COLOR = '#c7f0d8'
     const COLOR = '#43523d'
     const WIDTH = 80
     const HEIGHT = 48
     const MAX_VELOCITY = 15
-
-    class Entity {
-
-    }
 
     class Player {
       #position
@@ -497,7 +516,7 @@
 
       constructor(position) {
         this.#position = position
-        this.collisionShape = new BoundingBox(position, 8, 8)
+        this.collisionShape = new BoundingBox(position, Point.at(2, 1), 4, 5)
         this.update()
       }
 
@@ -557,7 +576,7 @@
         super(
           position,
           Box.spriteFunc(width, height),
-          new BoundingBox(position, width, height)
+          new BoundingBox(position, Point.at(0, 0), width, height)
         )
       }
 
@@ -583,16 +602,18 @@
 
     Dabu.load(
       () => {
-        ctx.bgContext.fillStyle = '#c7f0d8'
+        ctx.bgContext.fillStyle = BG_COLOR
         ctx.bgContext.fillRect(0, 0, WIDTH, HEIGHT)
 
-        let player = new Player(Point.at(4, 4))
-        let box = new Box(Point.at(40, 10), 16, 8)
+        let scene = new Scene()
 
-        return { player: player, box: box }
+        scene.entities.player = new Player(Point.at(4, 4))
+        scene.entities.box = new Box(Point.at(40, 10), 16, 8)
+
+        return scene
       },
-      (state, secondsPassed) => {
-        let { player, box } = state
+      (scene, secondsPassed) => {
+        let { player, box } = scene.entities
 
         if (ctx.keys.ArrowLeft || ctx.keys.ArrowRight || ctx.keys.ArrowUp || ctx.keys.ArrowDown) {
           player.velocity = MAX_VELOCITY
@@ -608,16 +629,20 @@
         player.position = player.position.add(player.direction.multiply(player.velocity * secondsPassed))
 
         if (player.collisionShape.collides(box.collisionShape)) {
-          let { position: cp, width, height } = box.collisionShape
-          if (player.direction == Point.UP) player.position = Point.at(player.position.x, cp.y + height)
-          else if (player.direction == Point.DOWN) player.position = Point.at(player.position.x, cp.y - player.collisionShape.height)
-          else if (player.direction == Point.LEFT) player.position = Point.at(cp.x + width, player.position.y)
-          else player.position = Point.at(cp.x - player.collisionShape.width, player.position.y)
+          let { position: pp, width: pw, height: ph } = player.collisionShape
+          let { position: bp, width: bw, height: bh } = box.collisionShape
+          let cx = pp.x, cy = pp.y
+
+          if (player.direction.y < 0) cy = bp.y + bh
+          else if (player.direction.y > 0) cy = bp.y - ph
+
+          if (player.direction.x < 0) cx = bp.x + bw
+          else if (player.direction.x > 0) cx = bp.x - pw
+
+          player.position = Point.at(cx, cy).subtract(player.collisionShape.offset)
         }
 
-        Dabu.clearScreen()
-        Dabu.drawEntity(player)
-        Dabu.drawEntity(box)
+        Dabu.drawScene(scene)
       },
       { maxFPS: MAX_FPS }
     )
