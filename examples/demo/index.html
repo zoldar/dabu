@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Dabu</title>
+  <title>Dabu Demo #1</title>
   <link href="../../dabu.css" rel="stylesheet" />
   <script src="../../dabu.js"></script>
 </head>
@@ -91,19 +91,46 @@
 
     class Bomb extends StaticEntity {
       zindex = 1
+      blastRadius
       pendingExplosion
 
-      constructor(position) {
+      constructor(position, blastRadius) {
         super(
           position,
-          new Sprite('bomb_pulsing', 3)
+          new Sprite('bomb_pulsing', 3),
+          null,
+          new BoundingBox(position, Point.at(0, 0), 8, 8)
         )
+        this.blastRadius = blastRadius || 2
       }
 
       start(time) {
         this.pendingExplosion = setTimeout(() => {
           Dabu.sendSignal('explode', this)
         }, time)
+      }
+
+      explode() {
+        this.sprite = new Sprite('bomb_exploding', 4, () => {
+          Dabu.sendSignal('blasted', this)
+        })
+      }
+    }
+
+    class Blast extends StaticEntity {
+      zindex = 1
+
+      constructor(position, horizontal) {
+        let spriteName = 'blast_' + (horizontal ? 'horizontal' : 'vertical')
+
+        super(
+          position,
+          new Sprite(spriteName, 4, () => {
+            Dabu.sendSignal('blasted', this)
+          }),
+          null,
+          new BoundingBox(position, Point.at(0, 0), 8, 8)
+        )
       }
     }
 
@@ -114,6 +141,7 @@
         super(
           position,
           new Sprite('crate'),
+          new BoundingBox(position, Point.at(0, 0), 8, 8),
           new BoundingBox(position, Point.at(0, 0), 8, 8)
         )
       }
@@ -125,7 +153,7 @@
       let y = Math.round(player.position.y / 8) * 8
       let bomb = new Bomb(Point.at(x, y))
 
-      if (!scene.has(bomb)) {
+      if (!scene.has(bomb) && (!scene.groups.bombs || scene.groups.bombs.size < 2)) {
         scene.add(bomb, 'bombs')
         bomb.start(3000)
       }
@@ -145,8 +173,21 @@
     Dabu.loadSprite('bomb1', 'sprite1', Point.at(16, 16), 8, 8)
     Dabu.loadSprite('bomb2', 'sprite1', Point.at(24, 16), 8, 8)
     Dabu.loadSprite('bomb3', 'sprite1', Point.at(32, 16), 8, 8)
+    Dabu.loadSprite('bomb_explode1', 'sprite1', Point.at(16, 24), 8, 8)
+    Dabu.loadSprite('bomb_explode2', 'sprite1', Point.at(8, 24), 8, 8)
+    Dabu.loadSprite('bomb_explode3', 'sprite1', Point.at(0, 24), 8, 8)
+    Dabu.loadSprite('blast_horizontal1', 'sprite1', Point.at(24, 24), 8, 8)
+    Dabu.loadSprite('blast_horizontal2', 'sprite1', Point.at(40, 24), 8, 8)
+    Dabu.loadSprite('blast_horizontal3', 'sprite1', Point.at(56, 16), 8, 8)
+    Dabu.loadSprite('blast_vertical1', 'sprite1', Point.at(32, 24), 8, 8)
+    Dabu.loadSprite('blast_vertical2', 'sprite1', Point.at(48, 24), 8, 8)
+    Dabu.loadSprite('blast_vertical3', 'sprite1', Point.at(48, 16), 8, 8)
     Dabu.loadSprite('crate', 'sprite1', Point.at(40, 16), 8, 8)
+    Dabu.loadSprite('ghost', 'sprite1', Point.at(56, 24), 8, 8)
     Dabu.defineSprite('bomb_pulsing', ['bomb2', 'bomb3', 'bomb2', 'bomb1'])
+    Dabu.defineSprite('bomb_exploding', ['bomb_explode1', 'bomb_explode2', 'bomb_explode3'])
+    Dabu.defineSprite('blast_horizontal', ['blast_horizontal1', 'blast_horizontal2', 'blast_horizontal3'])
+    Dabu.defineSprite('blast_vertical', ['blast_vertical1', 'blast_vertical2', 'blast_vertical3'])
 
     Dabu.init('stage', WIDTH, HEIGHT)
 
@@ -200,9 +241,30 @@
 
         if (ctx.signals.explode) {
           ctx.signals.explode.forEach(bomb => {
-            scene.remove(bomb)
+            bomb.explode()
+            for (let idx = 1; idx <= bomb.blastRadius; idx++) {
+              [
+                Point.UP.multiply(idx * 8),
+                Point.DOWN.multiply(idx * 8),
+                Point.LEFT.multiply(idx * 8),
+                Point.RIGHT.multiply(idx * 8),
+                Point.UP.multiply(idx * 8)
+              ].forEach(p => {
+                let position = bomb.position.add(p)
+                scene.add(new Blast(position, p.horizontal()))
+              })
+            }
           })
+
           ctx.signals.explode = []
+        }
+
+        if (ctx.signals.blasted) {
+          ctx.signals.blasted.forEach(blasted => {
+            scene.remove(blasted)
+          })
+
+          ctx.signals.blasted = []
         }
 
         Dabu.runPhysics(scene)

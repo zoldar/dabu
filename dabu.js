@@ -147,11 +147,14 @@
     #name
     timestamp
     fps
+    endCallback
+    endCallbackCalled = false
 
-    constructor(name, fps) {
+    constructor(name, fps, endCallback) {
       this.#name = name
       this.timestamp = performance.now()
       this.fps = fps || 10
+      this.endCallback = endCallback
     }
 
     set name(name) {
@@ -171,13 +174,14 @@
     _velocity = 0
     sprite
     collisionShape
+    hitShape
     zindex = 0
 
     constructor(position) {
       this._position = position
       this.update()
 
-      // extending class must provide collisionShape and sprite
+      // extending class must provide collisionShape, hitShape and sprite
     }
 
     get position() {
@@ -187,6 +191,9 @@
     set position(position) {
       this._position = position
       this.collisionShape.position = position
+      if (this.hitShape) {
+        this.hitShape.position = position
+      }
     }
 
     get direction() {
@@ -214,12 +221,14 @@
     position
     sprite
     collisionShape
+    hitShape
     zindex = 0
 
-    constructor(position, sprite, collisionShape) {
+    constructor(position, sprite, collisionShape, hitShape) {
       this.position = position
       this.sprite = sprite
       this.collisionShape = collisionShape
+      this.hitShape = hitShape
     }
   }
 
@@ -490,8 +499,22 @@
       let spriteFrame
 
       if (sprites instanceof Array) {
-        let msPerFrame = 1000 / sprite.fps
-        let frame = Math.floor(((performance.now() - sprite.timestamp) / msPerFrame)) % sprites.length
+        let frame
+
+        if (sprite.endCallbackCalled) {
+          frame = sprites.length - 1
+        } else {
+          let msPerFrame = 1000 / sprite.fps
+          frame = Math.floor(((performance.now() - sprite.timestamp) / msPerFrame)) % sprites.length
+        }
+
+        if (sprite.endCallback &&
+          !sprite.endCallbackCalled &&
+          frame == sprites.length - 1) {
+          sprite.endCallbackCalled = true
+          sprite.endCallback()
+        }
+
         spriteFrame = sprites[frame]
       } else {
         spriteFrame = sprites
@@ -512,7 +535,6 @@
   window.Dabu = {
     // Utility classes
     Point,
-    HashSet,
     BoundingBox,
     Scene,
     Sprite,
