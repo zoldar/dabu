@@ -1,9 +1,9 @@
 # TODO
 
-* [ ] make collision detection work for smaller and entity offset shapes
-* [ ] generalize collision detection
-* [ ] generalize entity behavior
-* [ ] introduce scene abstraction for easier rendering
+* [x] make collision detection work for smaller and entity offset shapes
+* [x] generalize collision detection
+* [x] generalize entity behavior
+* [x] introduce scene abstraction for easier rendering
 * [ ] try implementing basics of boomerman as a test
 
 For later:
