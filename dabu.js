@@ -63,6 +63,11 @@
       }
     }
 
+    distance(p) {
+      let delta = this.subtract(p)
+      return Math.sqrt(delta.x * delta.x + delta.y * delta.y)
+    }
+
     directionName() {
       if (this.x > 0 && this.y == 0) return 'right'
       if (this.x < 0 && this.y == 0) return 'left'
@@ -208,6 +213,7 @@
       if (this.hitShape) {
         this.hitShape.position = position
       }
+      this.update()
     }
 
     get direction() {

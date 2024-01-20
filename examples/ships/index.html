@@ -31,7 +31,7 @@
     const COLOR = '#43523d'
     const WIDTH = 160
     const HEIGHT = 96
-    const ACCELERATION = 4
+    const ACCELERATION = 6
     const DECELERATION = 8
     const MAX_VELOCITY = 16
 
@@ -127,6 +127,79 @@
       }
     }
 
+    class CanonBall extends DynamicEntity {
+      zindex = 3
+      firePosition
+      shotDistance = 35
+      _velocity = 16
+
+      constructor(position, direction) {
+        super(position)
+        this.direction = direction
+        this.firePosition = position
+      }
+
+      hash() {
+        return `CanonBall#${this.firePosition.x}#${this.firePosition.y}`
+      }
+
+      update() {
+        if (!this.sprite) {
+          let that = this
+          this.sprite = new Sprite('ball_ascending', 6, () => {
+            that.sprite = new Sprite('ball4')
+          })
+        }
+
+        if (this._position.distance(this.firePosition || this._position) > this.shotDistance - 10 && this.sprite.name == 'ball4') {
+          this.sprite = new Sprite('ball_descending', 6, () => { })
+        }
+      }
+    }
+
+    class Plonk extends StaticEntity {
+      zindex = 1
+
+      constructor(position) {
+        super(position, new Sprite('plonk', 6, () => {
+          Dabu.sendSignal('remove', this)
+        }))
+      }
+    }
+
+    class Blast extends StaticEntity {
+      constructor(position, direction) {
+        let we = ''
+        if (direction.x > 0) we = 'e'
+        else if (direction.x < 0) we = 'w'
+
+        let ns = ''
+        if (direction.y > 0) ns = 's'
+        else if (direction.y < 0) ns = 'n'
+
+        super(
+          position,
+          new Sprite('blast_' + ns + we, 8, () => Dabu.sendSignal('remove', this))
+        )
+      }
+    }
+
+    function fireCanon(scene, board) {
+      let { player } = scene.entities
+      let direction
+
+      // determine +/- 90 degrees direction, depending on board
+      if (board == 'left') {
+        direction = Point.at(player.direction.y, -1 * player.direction.x)
+      } else {
+        direction = Point.at(-1 * player.direction.y, player.direction.x)
+      }
+
+      scene.add(new Blast(player.position, direction))
+      let ballPosition = player.position.add(direction.multiply(TILE_SIZE / 2))
+      scene.add(new CanonBall(ballPosition, direction), 'canonballs')
+    }
+
     Dabu.init('stage', WIDTH, HEIGHT)
 
     Dabu.load(
@@ -175,10 +248,30 @@
           scene.add(new Ripple(ripplePosition, player.direction))
         }
 
+        if (ctx.keys.z) {
+          fireCanon(scene, 'left')
+          ctx.keys.z = false
+        }
+        else if (ctx.keys.x) {
+          fireCanon(scene, 'right')
+          ctx.keys.x = false
+        }
+
         player.position = player.position.add(player.direction.multiply(player.velocity * secondsPassed))
+
+        scene.getGroup('canonballs').forEach(b => {
+          b.position = b.position.add(b.direction.multiply(b.velocity * secondsPassed))
+
+          if (b.position.distance(b.firePosition) >= b.shotDistance) {
+            scene.remove(b)
+            scene.add(new Plonk(b.position))
+          }
+        })
 
         if (ctx.signals.remove) {
           ctx.signals.remove.forEach(e => scene.remove(e))
+
+          delete ctx.signals.remove
         }
 
         Dabu.runPhysics(scene)
