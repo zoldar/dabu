@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dabu Demo #2</title>
+  <link href="../../dabu.css" rel="stylesheet" />
+  <script src="../../dabu.js"></script>
+</head>
+
+<body>
+  <div id="stage"></div>
+  <script>
+    "use strict"
+
+    // library "imports"
+    const {
+      Point,
+      Sprite,
+      Scene,
+      BoundingBox,
+      DynamicEntity,
+      StaticEntity,
+      ctx
+    } = Dabu;
+
+    const TILE_SIZE = 16
+    const MAX_FPS = 30
+    const BG_COLOR = '#c7f0d8'
+    const COLOR = '#43523d'
+    const WIDTH = 160
+    const HEIGHT = 96
+    const ACCELERATION = 4
+    const DECELERATION = 8
+    const MAX_VELOCITY = 16
+
+    Dabu.loadImage('sprite1', 'sprite1.png')
+
+    function loadSprite(name, tileX, tileY, opts) {
+      Dabu.loadSprite(name, 'sprite1', Point.at(tileX, tileY).multiply(TILE_SIZE), TILE_SIZE, TILE_SIZE, opts)
+    }
+
+    loadSprite('ship_n', 0, 0)
+    loadSprite('ship_s', 1, 0)
+    loadSprite('ship_w', 2, 0)
+    loadSprite('ship_e', 3, 0)
+    loadSprite('ship_ne', 4, 0)
+    loadSprite('ship_nw', 5, 0)
+    loadSprite('ship_sw', 6, 0)
+    loadSprite('ship_se', 7, 0)
+    loadSprite('hit', 8, 0, { count: 4 })
+    loadSprite('ship_ripple_nw', 0, 1, { count: 3 })
+    loadSprite('ship_ripple_ne', 3, 1, { count: 3 })
+    loadSprite('ship_ripple_sw', 6, 1, { count: 3 })
+    loadSprite('ship_ripple_se', 9, 1, { count: 3 })
+    loadSprite('ship_ripple_s', 0, 2, { count: 3 })
+    loadSprite('ship_ripple_w', 3, 2, { count: 3 })
+    loadSprite('ship_ripple_e', 6, 2, { count: 3 })
+    loadSprite('ship_ripple_n', 9, 2, { count: 3 })
+    loadSprite('blast_e', 0, 3, { count: 3 })
+    loadSprite('blast_w', 3, 3, { count: 3 })
+    loadSprite('blast_n', 6, 3, { count: 3 })
+    loadSprite('blast_s', 9, 3, { count: 3 })
+    loadSprite('blast_ne', 0, 4, { count: 3 })
+    loadSprite('blast_nw', 3, 4, { count: 3 })
+    loadSprite('blast_se', 6, 4, { count: 3 })
+    loadSprite('blast_sw', 9, 4, { count: 3 })
+    loadSprite('ball1', 0, 5)
+    loadSprite('ball2', 1, 5)
+    loadSprite('ball3', 2, 5)
+    loadSprite('ball4', 3, 5)
+    loadSprite('plonk', 4, 5, { count: 3 })
+    loadSprite('island', 7, 5, { count: 2 })
+    Dabu.defineSprite('ball_ascending', ['ball1', 'ball2', 'ball3', 'ball4'])
+    Dabu.defineSprite('ball_descending', ['ball4', 'ball3', 'ball2', 'ball1'])
+
+    class Island extends StaticEntity {
+      zindex = 1
+
+      constructor(position) {
+        super(position, new Sprite('island', 2))
+      }
+    }
+
+    class Player extends DynamicEntity {
+      zindex = 2
+
+      constructor(position) {
+        super(position)
+        this.direction = Point.RIGHT
+      }
+
+      update() {
+        let we = ''
+        if (this._direction.x > 0) we = 'e'
+        else if (this._direction.x < 0) we = 'w'
+
+        let ns = ''
+        if (this._direction.y > 0) ns = 's'
+        else if (this._direction.y < 0) ns = 'n'
+
+        let name = 'ship_' + ns + we
+
+        if (!this.sprite) {
+          this.sprite = new Sprite(name)
+        } else {
+          this.sprite.name = name
+        }
+      }
+    }
+
+    class Ripple extends StaticEntity {
+      constructor(position, direction) {
+        let we = ''
+        if (direction.x > 0) we = 'e'
+        else if (direction.x < 0) we = 'w'
+
+        let ns = ''
+        if (direction.y > 0) ns = 's'
+        else if (direction.y < 0) ns = 'n'
+
+        super(
+          position,
+          new Sprite('ship_ripple_' + ns + we, 4, () => Dabu.sendSignal('remove', this))
+        )
+      }
+    }
+
+    Dabu.init('stage', WIDTH, HEIGHT)
+
+    Dabu.load(
+      () => {
+        ctx.bgContext.fillStyle = BG_COLOR
+        ctx.bgContext.fillRect(0, 0, WIDTH, HEIGHT)
+
+        let scene = new Scene()
+
+        scene.entities.player = new Player(Point.at(32, 32))
+        scene.add(new Island(Point.at(16, 16)))
+        scene.add(new Island(Point.at(96, 64)))
+        scene.add(new Island(Point.at(96, 32)))
+
+        return scene
+      },
+      (scene, secondsPassed) => {
+        let { player } = scene.entities
+
+        let direction = Point.at(0, 0)
+        if (ctx.keys.ArrowUp) direction = direction.add(Point.UP)
+        if (ctx.keys.ArrowDown) direction = direction.add(Point.DOWN)
+        if (ctx.keys.ArrowLeft) direction = direction.add(Point.LEFT)
+        if (ctx.keys.ArrowRight) direction = direction.add(Point.RIGHT)
+
+        let oldVelocity = player.velocity
+        let oldDirection = player.direction
+
+        if (direction.x != 0 || direction.y != 0) {
+          player.direction = direction.normalize()
+          if (player.velocity < MAX_VELOCITY) {
+            player.velocity += ACCELERATION * secondsPassed
+          } else {
+            player.velocity = MAX_VELOCITY
+          }
+        } else {
+          if (player.velocity > 0) {
+            player.velocity -= DECELERATION * secondsPassed
+          } else {
+            player.velocity = 0
+          }
+        }
+
+        if (!oldDirection.equals(player.direction) || oldVelocity == 0 && player.velocity > 0) {
+          let ripplePosition = player.position.subtract(player.direction.multiply(TILE_SIZE))
+          scene.add(new Ripple(ripplePosition, player.direction))
+        }
+
+        player.position = player.position.add(player.direction.multiply(player.velocity * secondsPassed))
+
+        if (ctx.signals.remove) {
+          ctx.signals.remove.forEach(e => scene.remove(e))
+        }
+
+        Dabu.runPhysics(scene)
+        Dabu.drawScene(scene)
+      },
+      { maxFPS: MAX_FPS }
+    )
+  </script>
+</body>
+
+</html>

@@ -39,12 +39,12 @@
     }
 
     equals(p) {
-      return Math.abs(this.x - p.x) < PRECISION_FRACTION &&
-        Math.abs(this.y - p.y) < PRECISION_FRACTION
+      return Math.abs(this.x - p.x) < this.PRECISION_FRACTION &&
+        Math.abs(this.y - p.y) < this.PRECISION_FRACTION
     }
 
     hash() {
-      return Math.round(this.x, PRECISION) + '#' + Math.round(this.y, PRECISION)
+      return Math.round(this.x, this.PRECISION) + '#' + Math.round(this.y, this.PRECISION)
     }
 
     vertical() {
@@ -55,8 +55,12 @@
       return this.x != 0 && this.y == 0
     }
 
-    direction() {
-      return this.divide(this)
+    normalize() {
+      if (this.x == 0 || this.y == 0) {
+        return this.divide(Math.abs(this.x || this.y))
+      } else {
+        return this.divide(Math.sqrt(this.x * this.x + this.y * this.y))
+      }
     }
 
     directionName() {
@@ -198,7 +202,9 @@
 
     set position(position) {
       this._position = position
-      this.collisionShape.position = position
+      if (this.collisionShape) {
+        this.collisionShape.position = position
+      }
       if (this.hitShape) {
         this.hitShape.position = position
       }
