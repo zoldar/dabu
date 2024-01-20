@@ -145,6 +145,10 @@
           new BoundingBox(position, Point.at(0, 0), 8, 8)
         )
       }
+
+      destroy() {
+        Dabu.sendSignal('destroyed', this)
+      }
     }
 
     function dropBomb(scene) {
@@ -215,6 +219,7 @@
         scene.add(new Grass(Point.at(16, 8)), 'walls')
         scene.add(new Grass(Point.at(24, 8)), 'walls')
         scene.add(new Crate(Point.at(24, 8)), 'crates')
+        scene.add(new Crate(Point.at(8, 24)), 'crates')
 
         return scene
       },
@@ -251,7 +256,12 @@
                 Point.UP.multiply(idx * 8)
               ].forEach(p => {
                 let position = bomb.position.add(p)
-                scene.add(new Blast(position, p.horizontal()))
+                let blast = new Blast(position, p.horizontal())
+                scene.add(blast)
+
+                Dabu.getCollisions(blast, scene.getGroup('crates'), 'hit').forEach(c => {
+                  c.destroy()
+                })
               })
             }
           })
@@ -265,6 +275,12 @@
           })
 
           ctx.signals.blasted = []
+        }
+
+        if (ctx.signals.destroyed) {
+          ctx.signals.destroyed.forEach(destroyed => {
+            scene.remove(destroyed)
+          })
         }
 
         Dabu.runPhysics(scene)

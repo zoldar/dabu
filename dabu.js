@@ -104,6 +104,14 @@
       delete this.entities[hash]
     }
 
+    getGroup(name) {
+      if (this.groups[name]) {
+        return Array.from(this.groups[name].values()).map(hash => this.entities[hash])
+      } else {
+        return []
+      }
+    }
+
     hash(e) {
       if (e.hash) return e.hash()
 
@@ -411,6 +419,24 @@
     return [cx, cy]
   }
 
+  function getCollisions(entity, otherEntities, shapeType) {
+    let collisions = []
+
+    let entityShape = shapeType == 'hit' ? entity.hitShape : entity.collisionShape
+
+    if (entityShape) {
+      otherEntities.forEach(e => {
+        let eShape = shapeType == 'hit' ? e.hitShape : e.collisionShape
+
+        if (eShape && entityShape.collides(eShape)) {
+          collisions.push(e)
+        }
+      })
+    }
+
+    return collisions
+  }
+
   function runPhysics({ entities }) {
     Object.entries(entities).forEach(([key, entity]) => {
       if (entity instanceof DynamicEntity && entity.collisionShape && entity.velocity > 0) {
@@ -550,6 +576,7 @@
     clearScreen,
     drawScene,
     runPhysics,
+    getCollisions,
     sendSignal,
 
     // Public context
