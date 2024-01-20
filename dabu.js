@@ -83,6 +83,7 @@
   Point.RIGHT = Point.at(1, 0)
 
   class Scene {
+    cameraOrigin = Point.at(0, 0)
     groups = {}
     entities = {}
 
@@ -524,15 +525,15 @@
     ).toSorted(
       (e1, e2) => e1.zindex - e2.zindex
     ).forEach(
-      entity => drawEntity(entity)
+      entity => drawEntity(scene.cameraOrigin, entity)
     )
   }
 
-  function drawEntity({ position, sprite }) {
+  function drawEntity(origin, { position, sprite }) {
     if (sprite instanceof Function) {
-      sprite(position.round())
+      sprite(position.subtract(origin).round())
     } else {
-      let { x, y } = position.round()
+      let { x, y } = position.subtract(origin).round()
       let sprites = ctx.sprites[sprite.name]
       let spriteFrame
 

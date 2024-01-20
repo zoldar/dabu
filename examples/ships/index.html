@@ -34,6 +34,8 @@
     const ACCELERATION = 6
     const DECELERATION = 8
     const MAX_VELOCITY = 16
+    const CAMERA_HMARGIN = 40
+    const CAMERA_VMARGIN = 40
 
     Dabu.loadImage('sprite1', 'sprite1.png')
 
@@ -200,6 +202,30 @@
       scene.add(new CanonBall(ballPosition, direction), 'canonballs')
     }
 
+    function updateCamera(scene) {
+      let { player } = scene.entities
+      let { x: originX, y: originY } = scene.cameraOrigin
+      let { x, y } = player.position
+      let screenX = x - originX
+      let screenY = y - originY
+
+      let newX = originX
+      if (screenX < CAMERA_HMARGIN) {
+        newX = x - CAMERA_HMARGIN
+      } else if (screenX + TILE_SIZE > WIDTH - CAMERA_HMARGIN) {
+        newX = (x + TILE_SIZE) - WIDTH + CAMERA_HMARGIN
+      }
+
+      let newY = originY
+      if (screenY < CAMERA_VMARGIN) {
+        newY = y - CAMERA_VMARGIN
+      } else if (screenY + TILE_SIZE > HEIGHT - CAMERA_VMARGIN) {
+        newY = (y + TILE_SIZE) - HEIGHT + CAMERA_VMARGIN
+      }
+
+      scene.cameraOrigin = Point.at(newX, newY)
+    }
+
     Dabu.init('stage', WIDTH, HEIGHT)
 
     Dabu.load(
@@ -274,6 +300,7 @@
           delete ctx.signals.remove
         }
 
+        updateCamera(scene)
         Dabu.runPhysics(scene)
         Dabu.drawScene(scene)
       },
