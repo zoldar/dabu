@@ -78,7 +78,7 @@
     Dabu.defineSprite('ball_descending', ['ball4', 'ball3', 'ball2', 'ball1'])
 
     class Island extends StaticEntity {
-      zindex = 1
+      zindex = 2
 
       constructor(position) {
         super(
@@ -90,12 +90,12 @@
     }
 
     class Player extends DynamicEntity {
-      zindex = 2
+      zindex = 1
       kinetic = false
 
       constructor(position) {
         super(position)
-        this.collisionShape = new BoundingBox(position, Point.at(0, 0), TILE_SIZE, TILE_SIZE)
+        this.collisionShape = new BoundingBox(position, Point.at(3, 3), TILE_SIZE - 6, TILE_SIZE - 6)
         this.direction = Point.RIGHT
       }
 
@@ -250,9 +250,9 @@
         let scene = new Scene()
 
         scene.entities.player = new Player(Point.at(32, 32))
-        scene.add(new Island(Point.at(16, 16)))
-        scene.add(new Island(Point.at(96, 64)))
-        scene.add(new Island(Point.at(96, 32)))
+        scene.add(new Island(Point.at(16, 16)), 'islands')
+        scene.add(new Island(Point.at(96, 64)), 'islands')
+        scene.add(new Island(Point.at(96, 32)), 'islands')
 
         return scene
       },
@@ -298,6 +298,11 @@
         }
 
         player.position = player.position.add(player.direction.multiply(player.velocity * secondsPassed))
+
+        if (Dabu.getCollisions(player, scene.getGroup('islands')).length > 0) {
+          player.position = player.previousPosition
+          player.velocity = 0
+        }
 
         if (ctx.signals.plonk) {
           ctx.signals.plonk.forEach(ball => {
