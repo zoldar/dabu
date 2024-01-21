@@ -104,6 +104,7 @@
           null,
           new BoundingBox(position, Point.at(0, 0), 8, 8)
         )
+        this.hash = `Bomb#${position.x}#${position.y}`
         this.blastRadius = blastRadius || 2
       }
 
@@ -269,7 +270,7 @@
             }
           })
 
-          ctx.signals.explode = []
+          delete ctx.signals.explode
         }
 
         if (ctx.signals.blasted) {
@@ -277,13 +278,15 @@
             scene.remove(blasted)
           })
 
-          ctx.signals.blasted = []
+          delete ctx.signals.blasted
         }
 
         if (ctx.signals.destroyed) {
           ctx.signals.destroyed.forEach(destroyed => {
             scene.remove(destroyed)
           })
+
+          delete ctx.signals.destroyed
         }
 
         Dabu.runPhysics(scene, secondsPassed)

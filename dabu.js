@@ -259,6 +259,7 @@
   let gameCanvas
   let oldTimestamp = performance.now()
   let requestAnimationFrameId
+  let keysDown = {}
   let keyUpEvent
 
   // public state context
@@ -349,11 +350,12 @@
   function setupControls() {
     window.addEventListener('keydown', e => {
       // disable key repeating
-      if (ctx.keys[e.key]) return
+      if (keysDown[e.key]) return
 
       let key = keyHandlers.has(e.key) ? e.key : 'any'
       keyUpEvent = keyHandlers.get(key)
 
+      keysDown[e.key] = true
       ctx.keys[e.key] = true
     })
 
@@ -363,6 +365,7 @@
         keyUpEvent = null
       }
 
+      keysDown[e.key] = false
       ctx.keys[e.key] = false
     })
 
