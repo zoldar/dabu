@@ -90,6 +90,24 @@
       }
     }
 
+    function shipSpriteUpdate(e) {
+      let we = ''
+      if (e._direction.x > 0) we = 'e'
+      else if (e._direction.x < 0) we = 'w'
+
+      let ns = ''
+      if (e._direction.y > 0) ns = 's'
+      else if (e._direction.y < 0) ns = 'n'
+
+      let name = 'ship_' + ns + we
+
+      if (!e.sprite) {
+        e.sprite = new Sprite(name)
+      } else {
+        e.sprite.name = name
+      }
+    }
+
     class Player extends DynamicEntity {
       zindex = 1
       kinetic = false
@@ -102,22 +120,23 @@
 
       update() {
         super.update()
+        shipSpriteUpdate(this)
+      }
+    }
 
-        let we = ''
-        if (this._direction.x > 0) we = 'e'
-        else if (this._direction.x < 0) we = 'w'
+    class EnemyShip extends DynamicEntity {
+      zindex = 1
 
-        let ns = ''
-        if (this._direction.y > 0) ns = 's'
-        else if (this._direction.y < 0) ns = 'n'
+      constructor(position, direction) {
+        super(position)
+        this.collisionShape = new BoundingBox(position, Point.at(3, 3), TILE_SIZE - 6, TILE_SIZE - 6)
+        this.hitShape = new BoundingBox(position, Point.at(3, 3), TILE_SIZE - 6, TILE_SIZE - 6)
+        this.direction = direction
+      }
 
-        let name = 'ship_' + ns + we
-
-        if (!this.sprite) {
-          this.sprite = new Sprite(name)
-        } else {
-          this.sprite.name = name
-        }
+      update() {
+        super.update()
+        shipSpriteUpdate(this)
       }
     }
 
@@ -254,9 +273,10 @@
         let scene = new Scene()
 
         scene.entities.player = new Player(Point.at(32, 32))
-        scene.add(new Island(Point.at(16, 16)), 'islands')
-        scene.add(new Island(Point.at(96, 64)), 'islands')
-        scene.add(new Island(Point.at(96, 32)), 'islands')
+        scene.add(new Island(Point.at(16, 16)), ['islands', 'hit_targets'])
+        scene.add(new Island(Point.at(96, 64)), ['islands', 'hit_targets'])
+        scene.add(new Island(Point.at(96, 32)), ['islands', 'hit_targets'])
+        scene.add(new EnemyShip(Point.at(110, 40), Point.DOWN), ['enemies', 'hit_targets'])
 
         return scene
       },
@@ -312,7 +332,12 @@
           ctx.signals.plonk.forEach(ball => {
             scene.remove(ball)
 
-            if (Dabu.getCollisions(ball, scene.getGroup('islands'), 'hit').length > 0) {
+            let hitTargets = Dabu.getCollisions(ball, scene.getGroup('hit_targets'), 'hit')
+            if (hitTargets.length > 0) {
+              let target = hitTargets[0]
+              if (target instanceof EnemyShip) {
+                scene.remove(target)
+              }
               scene.add(new Hit(ball.position))
             } else {
               scene.add(new Plonk(ball.position))
