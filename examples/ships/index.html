@@ -312,7 +312,7 @@
 
         updateCamera(scene)
         Dabu.runPhysics(scene, secondsPassed)
-        Dabu.drawScene(scene)
+        Dabu.drawScene(scene, {drawCollisionShapes: false})
       },
       { maxFPS: MAX_FPS }
     )

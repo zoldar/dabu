@@ -34,7 +34,7 @@
       return new Point(this.x / n, this.y / n)
     }
 
-    round(n, precision) {
+    round(precision) {
       return new Point(Math.round(this.x, precision), Math.round(this.y, precision))
     }
 
@@ -130,29 +130,29 @@
   }
 
   class BoundingBox {
-    #position
+    _position
     offset
     width
     height
 
     constructor(position, offset, width, height) {
       this.offset = offset
-      this.#position = position.round().add(offset)
+      this._position = position.round().add(offset)
       this.width = width
       this.height = height
     }
 
     set position(position) {
-      this.#position = position.round().add(this.offset)
+      this._position = position.round().add(this.offset)
     }
 
     get position() {
-      return this.#position
+      return this._position
     }
 
     collides(box2) {
-      let position1 = this.position.round()
-      let position2 = box2.position.round()
+      let position1 = this.position
+      let position2 = box2.position
 
       return position1.x < position2.x + box2.width &&
         position1.x + this.width > position2.x &&
@@ -162,28 +162,28 @@
   }
 
   class Sprite {
-    #name
+    _name
     timestamp
     fps
     endCallback
     endCallbackCalled = false
 
     constructor(name, fps, endCallback) {
-      this.#name = name
+      this._name = name
       this.timestamp = performance.now()
       this.fps = fps || 10
       this.endCallback = endCallback
     }
 
     set name(name) {
-      if (this.#name != name) {
-        this.#name = name
+      if (this._name != name) {
+        this._name = name
         this.timestamp = performance.now()
       }
     }
 
     get name() {
-      return this.#name
+      return this._name
     }
   }
   class DynamicEntity {
@@ -525,18 +525,19 @@
     })
   }
 
-  function drawScene(scene) {
+  function drawScene(scene, opts) {
     clearScreen()
     Object.values(
       scene.entities
     ).toSorted(
       (e1, e2) => e1.zindex - e2.zindex
     ).forEach(
-      entity => drawEntity(scene.cameraOrigin, entity)
+      entity => drawEntity(scene.cameraOrigin, entity, opts)
     )
   }
 
-  function drawEntity(origin, { position, sprite }) {
+  function drawEntity(origin, entity, opts) {
+    let { position, sprite } = entity
     if (sprite instanceof Function) {
       sprite(position.subtract(origin).round())
     } else {
@@ -567,6 +568,14 @@
       }
 
       ctx.gameContext.drawImage(spriteFrame, x, y)
+
+      if (entity.collisionShape && opts && opts.drawCollisionShapes) {
+        let { position, width, height } = entity.collisionShape
+        let shapePosition = position.subtract(origin).round()
+        ctx.gameContext.strokeStyle = 'green'
+        ctx.gameContext.lineWidth = 1
+        ctx.gameContext.strokeRect(shapePosition.x, shapePosition.y, width, height)
+      }
     }
   }
 
