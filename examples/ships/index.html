@@ -104,6 +104,8 @@
       }
 
       update() {
+        super.update()
+
         let we = ''
         if (this._direction.x > 0) we = 'e'
         else if (this._direction.x < 0) we = 'w'
@@ -156,6 +158,8 @@
       }
 
       update() {
+        super.update()
+
         if (!this.sprite) {
           let that = this
           this.sprite = new Sprite('ball_ascending', 6, () => { })

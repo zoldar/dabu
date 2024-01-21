@@ -42,6 +42,8 @@
       }
 
       update() {
+        super.update()
+
         let velocityStr = this._velocity > 0 ? 'walk' : 'stand'
         let name = 'player_' + velocityStr + '_' + this._direction.directionName()
 
