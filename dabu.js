@@ -43,10 +43,6 @@
         Math.abs(this.y - p.y) < this.PRECISION_FRACTION
     }
 
-    hash() {
-      return Math.round(this.x, this.PRECISION) + '#' + Math.round(this.y, this.PRECISION)
-    }
-
     vertical() {
       return this.x == 0 && this.y != 0
     }
@@ -88,30 +84,28 @@
     entities = {}
 
     has(e) {
-      return this.entities[this.hash(e)] !== undefined
+      return this.entities[e.hash] !== undefined
     }
 
     add(e, group) {
-      let hash = this.hash(e)
-      this.entities[hash] = e
+      this.entities[e.hash] = e
 
       if (group) {
         let groups = group instanceof Array ? group : [group]
 
         groups.forEach(g => {
           if (this.groups[g]) {
-            this.groups[g].add(hash)
+            this.groups[g].add(e.hash)
           } else {
-            this.groups[g] = new Set([hash])
+            this.groups[g] = new Set([e.hash])
           }
         })
       }
     }
 
     remove(e) {
-      let hash = this.hash(e)
-      Object.values(this.groups).forEach(g => g.delete(hash))
-      delete this.entities[hash]
+      Object.values(this.groups).forEach(g => g.delete(e.hash))
+      delete this.entities[e.hash]
     }
 
     getGroup(name) {
@@ -120,12 +114,6 @@
       } else {
         return []
       }
-    }
-
-    hash(e) {
-      if (e.hash) return e.hash()
-
-      return e.constructor.name + '#' + e.position.x + '#' + e.position.y
     }
   }
 
@@ -187,6 +175,7 @@
     }
   }
   class DynamicEntity {
+    hash
     previousPosition
     _position
     _direction = Point.DOWN
@@ -198,6 +187,7 @@
     zindex = 0
 
     constructor(position) {
+      this.hash = `${this.constructor.name}#${entityHashIndex++}`
       this._position = position
       this.previousPosition = position
 
@@ -242,6 +232,7 @@
   }
 
   class StaticEntity {
+    hash
     position
     sprite
     collisionShape
@@ -249,6 +240,7 @@
     zindex = 0
 
     constructor(position, sprite, collisionShape, hitShape) {
+      this.hash = `${this.constructor.name}#${entityHashIndex++}`
       this.position = position
       this.sprite = sprite
       this.collisionShape = collisionShape
@@ -257,6 +249,7 @@
   }
 
   // internal state
+  let entityHashIndex = 0
   let imagePromises = []
   let spritePromises = []
   let definedSprites = []

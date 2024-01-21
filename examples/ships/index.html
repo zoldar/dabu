@@ -84,7 +84,8 @@
         super(
           position,
           new Sprite('island', 2),
-          new BoundingBox(position, Point.at(3, TILE_SIZE / 2), TILE_SIZE - 6, TILE_SIZE / 2)
+          new BoundingBox(position, Point.at(3, TILE_SIZE / 2), TILE_SIZE - 6, (TILE_SIZE / 2) - 3),
+          new BoundingBox(position, Point.at(0, 0), TILE_SIZE, TILE_SIZE)
         )
       }
     }
@@ -97,10 +98,6 @@
         super(position)
         this.collisionShape = new BoundingBox(position, Point.at(3, 3), TILE_SIZE - 6, TILE_SIZE - 6)
         this.direction = Point.RIGHT
-      }
-
-      hash() {
-        return "Player"
       }
 
       update() {
@@ -149,12 +146,9 @@
 
       constructor(position, direction) {
         super(position)
+        this.hitShape = new BoundingBox(position, Point.at(0, 0), TILE_SIZE, TILE_SIZE)
         this.direction = direction
         this.firePosition = position
-      }
-
-      hash() {
-        return `CanonBall#${this.firePosition.x}#${this.firePosition.y}`
       }
 
       update() {
@@ -178,6 +172,16 @@
 
       constructor(position) {
         super(position, new Sprite('plonk', 6, () => {
+          Dabu.sendSignal('remove', this)
+        }))
+      }
+    }
+
+    class Hit extends StaticEntity {
+      zindex = 4
+
+      constructor(position) {
+        super(position, new Sprite('hit', 6, () => {
           Dabu.sendSignal('remove', this)
         }))
       }
@@ -307,7 +311,12 @@
         if (ctx.signals.plonk) {
           ctx.signals.plonk.forEach(ball => {
             scene.remove(ball)
-            scene.add(new Plonk(ball.position))
+
+            if (Dabu.getCollisions(ball, scene.getGroup('islands'), 'hit').length > 0) {
+              scene.add(new Hit(ball.position))
+            } else {
+              scene.add(new Plonk(ball.position))
+            }
           })
 
           delete ctx.signals.plonk
@@ -321,7 +330,7 @@
 
         updateCamera(scene)
         Dabu.runPhysics(scene, secondsPassed)
-        Dabu.drawScene(scene, {drawCollisionShapes: false})
+        Dabu.drawScene(scene, { drawCollisionShapes: false })
       },
       { maxFPS: MAX_FPS }
     )
