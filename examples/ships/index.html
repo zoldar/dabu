@@ -91,6 +91,7 @@
 
     class Player extends DynamicEntity {
       zindex = 2
+      kinetic = false
 
       constructor(position) {
         super(position)
@@ -157,13 +158,13 @@
       update() {
         if (!this.sprite) {
           let that = this
-          this.sprite = new Sprite('ball_ascending', 6, () => {
-            that.sprite = new Sprite('ball4')
-          })
+          this.sprite = new Sprite('ball_ascending', 6, () => { })
         }
 
-        if (this._position.distance(this.firePosition || this._position) > this.shotDistance - 10 && this.sprite.name == 'ball4') {
+        if (this._position.distance(this.firePosition || this._position) > this.shotDistance - 10 && this.sprite.name != 'ball_descending') {
           this.sprite = new Sprite('ball_descending', 6, () => { })
+        } else if (this._position.distance(this.firePosition || this._position) >= this.shotDistance) {
+          Dabu.sendSignal('plonk', this)
         }
       }
     }
@@ -294,14 +295,14 @@
 
         player.position = player.position.add(player.direction.multiply(player.velocity * secondsPassed))
 
-        scene.getGroup('canonballs').forEach(b => {
-          b.position = b.position.add(b.direction.multiply(b.velocity * secondsPassed))
+        if (ctx.signals.plonk) {
+          ctx.signals.plonk.forEach(ball => {
+            scene.remove(ball)
+            scene.add(new Plonk(ball.position))
+          })
 
-          if (b.position.distance(b.firePosition) >= b.shotDistance) {
-            scene.remove(b)
-            scene.add(new Plonk(b.position))
-          }
-        })
+          delete ctx.signals.plonk
+        }
 
         if (ctx.signals.remove) {
           ctx.signals.remove.forEach(e => scene.remove(e))
@@ -310,7 +311,7 @@
         }
 
         updateCamera(scene)
-        Dabu.runPhysics(scene)
+        Dabu.runPhysics(scene, secondsPassed)
         Dabu.drawScene(scene)
       },
       { maxFPS: MAX_FPS }

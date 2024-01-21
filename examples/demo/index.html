@@ -34,6 +34,7 @@
 
     class Player extends DynamicEntity {
       zindex = 2
+      kinetic = false
 
       constructor(position) {
         super(position)
@@ -283,7 +284,7 @@
           })
         }
 
-        Dabu.runPhysics(scene)
+        Dabu.runPhysics(scene, secondsPassed)
         Dabu.drawScene(scene)
       },
       { maxFPS: MAX_FPS }

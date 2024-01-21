@@ -190,6 +190,7 @@
     _position
     _direction = Point.DOWN
     _velocity = 0
+    kinetic = true
     sprite
     collisionShape
     hitShape
@@ -446,8 +447,12 @@
     return collisions
   }
 
-  function runPhysics({ entities }) {
+  function runPhysics({ entities }, secondsPassed) {
     Object.entries(entities).forEach(([key, entity]) => {
+      if (entity instanceof DynamicEntity && entity.kinetic) {
+        entity.position = entity.position.add(entity.direction.multiply(entity.velocity * secondsPassed))
+      }
+
       if (entity instanceof DynamicEntity && entity.collisionShape && entity.velocity > 0) {
         let { position: ePos, width: eWidth, height: eHeight } = entity.collisionShape
         let resX = ePos.x, resY = ePos.y
@@ -464,7 +469,6 @@
 
             if (entity.direction.x < 0) resX = oPos.x + oWidth
             else if (entity.direction.x > 0) resX = oPos.x - eWidth
-
           }
         })
 
