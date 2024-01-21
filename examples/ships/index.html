@@ -81,7 +81,11 @@
       zindex = 1
 
       constructor(position) {
-        super(position, new Sprite('island', 2))
+        super(
+          position,
+          new Sprite('island', 2),
+          new BoundingBox(position, Point.at(3, TILE_SIZE / 2), TILE_SIZE - 6, TILE_SIZE / 2)
+        )
       }
     }
 
@@ -90,7 +94,12 @@
 
       constructor(position) {
         super(position)
+        this.collisionShape = new BoundingBox(position, Point.at(0, 0), TILE_SIZE, TILE_SIZE)
         this.direction = Point.RIGHT
+      }
+
+      hash() {
+        return "Player"
       }
 
       update() {

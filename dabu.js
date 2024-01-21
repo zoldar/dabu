@@ -197,7 +197,6 @@
 
     constructor(position) {
       this._position = position
-      this.update()
 
       // extending class must provide collisionShape, hitShape and sprite
     }
@@ -214,7 +213,6 @@
       if (this.hitShape) {
         this.hitShape.position = position
       }
-      this.update()
     }
 
     get direction() {
@@ -223,7 +221,6 @@
 
     set direction(direction) {
       this._direction = direction
-      this.update()
     }
 
     get velocity() {
@@ -232,7 +229,6 @@
 
     set velocity(velocity) {
       this._velocity = velocity
-      this.update()
     }
 
     update() { }
@@ -455,10 +451,12 @@
       if (entity instanceof DynamicEntity && entity.collisionShape && entity.velocity > 0) {
         let { position: ePos, width: eWidth, height: eHeight } = entity.collisionShape
         let resX = ePos.x, resY = ePos.y
+        let collisionOccurred = false
         Object.entries(entities).forEach(([otherKey, otherEntity]) => {
           if (otherEntity.collisionShape &&
             key != otherKey &&
             entity.collisionShape.collides(otherEntity.collisionShape)) {
+            collisionOccurred = true
             let { position: oPos, width: oWidth, height: oHeight } = otherEntity.collisionShape
 
             if (entity.direction.y < 0) resY = oPos.y + oHeight
@@ -469,8 +467,13 @@
 
           }
         })
-        entity.position = Point.at(resX, resY).subtract(entity.collisionShape.offset)
+
+        if (collisionOccurred) {
+          entity.position = Point.at(resX, resY).subtract(entity.collisionShape.offset)
+        }
       }
+
+      if (entity.update) entity.update()
     })
   }
 
