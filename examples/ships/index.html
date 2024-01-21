@@ -85,7 +85,7 @@
           position,
           new Sprite('island', 2),
           new BoundingBox(position, Point.at(3, TILE_SIZE / 2), TILE_SIZE - 6, (TILE_SIZE / 2) - 3),
-          new BoundingBox(position, Point.at(0, 0), TILE_SIZE, TILE_SIZE)
+          new BoundingBox(position, Point.at(0, 4), TILE_SIZE, TILE_SIZE - 8)
         )
       }
     }
@@ -146,7 +146,7 @@
 
       constructor(position, direction) {
         super(position)
-        this.hitShape = new BoundingBox(position, Point.at(0, 0), TILE_SIZE, TILE_SIZE)
+        this.hitShape = new BoundingBox(position, Point.at(3, 3), TILE_SIZE - 5, TILE_SIZE - 5)
         this.direction = direction
         this.firePosition = position
       }
@@ -330,7 +330,7 @@
 
         updateCamera(scene)
         Dabu.runPhysics(scene, secondsPassed)
-        Dabu.drawScene(scene, { drawCollisionShapes: false })
+        Dabu.drawScene(scene, { drawCollisionShapes: false, drawHitShapes: false })
       },
       { maxFPS: MAX_FPS }
     )

@@ -566,6 +566,14 @@
         ctx.gameContext.lineWidth = 1
         ctx.gameContext.strokeRect(shapePosition.x, shapePosition.y, width, height)
       }
+
+      if (entity.hitShape && opts && opts.drawHitShapes) {
+        let { position, width, height } = entity.hitShape
+        let shapePosition = position.subtract(origin).round()
+        ctx.gameContext.strokeStyle = 'red'
+        ctx.gameContext.lineWidth = 1
+        ctx.gameContext.strokeRect(shapePosition.x, shapePosition.y, width, height)
+      }
     }
   }
 
