@@ -125,6 +125,17 @@
     }
 
     class EnemyShip extends DynamicEntity {
+      DIRECTIONS = [
+        Point.UP,
+        Point.DOWN,
+        Point.LEFT,
+        Point.RIGHT,
+        Point.UP.add(Point.RIGHT).normalize(),
+        Point.UP.add(Point.LEFT).normalize(),
+        Point.DOWN.add(Point.RIGHT).normalize(),
+        Point.DOWN.add(Point.LEFT).normalize()
+      ]
+
       zindex = 1
 
       constructor(position, direction) {
@@ -132,6 +143,12 @@
         this.collisionShape = new BoundingBox(position, Point.at(3, 3), TILE_SIZE - 6, TILE_SIZE - 6)
         this.hitShape = new BoundingBox(position, Point.at(3, 3), TILE_SIZE - 6, TILE_SIZE - 6)
         this.direction = direction
+        this.velocity = 10
+
+        let that = this
+        setInterval(() => {
+          that.direction = Dabu.sample(this.DIRECTIONS)
+        }, 5000)
       }
 
       update() {
@@ -277,6 +294,7 @@
         scene.add(new Island(Point.at(96, 64)), ['islands', 'hit_targets'])
         scene.add(new Island(Point.at(96, 32)), ['islands', 'hit_targets'])
         scene.add(new EnemyShip(Point.at(110, 40), Point.DOWN), ['enemies', 'hit_targets'])
+        scene.add(new EnemyShip(Point.at(60, 50), Point.LEFT), ['enemies', 'hit_targets'])
 
         return scene
       },

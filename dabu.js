@@ -588,6 +588,10 @@
     }
   }
 
+  function sample(list) {
+    return list[Math.floor((Math.random() * list.length))];
+  }
+
   window.Dabu = {
     // Utility classes
     Point,
@@ -608,6 +612,7 @@
     runPhysics,
     getCollisions,
     sendSignal,
+    sample,
 
     // Public context
     ctx
