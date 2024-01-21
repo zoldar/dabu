@@ -157,7 +157,7 @@
       }
     }
 
-    class CanonBall extends DynamicEntity {
+    class CannonBall extends DynamicEntity {
       zindex = 3
       firePosition
       shotDistance = 35
@@ -223,7 +223,7 @@
       }
     }
 
-    function fireCanon(scene, board) {
+    function fireCannon(scene, board) {
       let { player } = scene.entities
       let direction
 
@@ -236,7 +236,7 @@
 
       scene.add(new Blast(player.position, direction))
       let ballPosition = player.position.add(direction.multiply(TILE_SIZE / 2))
-      scene.add(new CanonBall(ballPosition, direction), 'canonballs')
+      scene.add(new CannonBall(ballPosition, direction), 'cannonballs')
     }
 
     function updateCamera(scene) {
@@ -313,11 +313,11 @@
         }
 
         if (ctx.keys.z) {
-          fireCanon(scene, 'left')
+          fireCannon(scene, 'left')
           ctx.keys.z = false
         }
         else if (ctx.keys.x) {
-          fireCanon(scene, 'right')
+          fireCannon(scene, 'right')
           ctx.keys.x = false
         }
 
@@ -334,10 +334,11 @@
 
             let hitTargets = Dabu.getCollisions(ball, scene.getGroup('hit_targets'), 'hit')
             if (hitTargets.length > 0) {
-              let target = hitTargets[0]
-              if (target instanceof EnemyShip) {
-                scene.remove(target)
-              }
+              hitTargets.forEach(target => {
+                if (target instanceof EnemyShip) {
+                  scene.remove(target)
+                }
+              })
               scene.add(new Hit(ball.position))
             } else {
               scene.add(new Plonk(ball.position))
