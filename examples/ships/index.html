@@ -259,7 +259,18 @@
     function updateCamera(scene) {
       let { player } = scene.entities
       let { x: originX, y: originY } = scene.cameraOrigin
-      let { x, y } = player.position
+      let { x, y } = player.position.round()
+
+      // diagonal movement smoothing
+      if (player.direction.x != 0 && player.direction.y != 0) {
+        let deltaX = Math.abs(x - player.lastDrawPosition.x)
+        let deltaY = Math.abs(y - player.lastDrawPosition.y)
+        if (deltaX <= 1 && deltaY <= 1 && deltaX != deltaY) {
+          x = player.lastDrawPosition.x
+          y = player.lastDrawPosition.y
+        }
+      }
+
       let screenX = x - originX
       let screenY = y - originY
 
@@ -374,7 +385,12 @@
 
         updateCamera(scene)
         Dabu.runPhysics(scene, secondsPassed)
-        Dabu.drawScene(scene, { drawCollisionShapes: false, drawHitShapes: false })
+        Dabu.drawScene(scene, {
+          drawCollisionShapes: false,
+          drawHitShapes: false,
+          drawTraces: false,
+          smoothDiagonalMovement: true
+        })
       },
       { maxFPS: MAX_FPS }
     )

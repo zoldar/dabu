@@ -52,11 +52,14 @@
     }
 
     normalize() {
+      let x = 0.75, y = 0.75
+
       if (this.x == 0 || this.y == 0) {
-        return this.divide(Math.abs(this.x || this.y))
-      } else {
-        return this.divide(Math.sqrt(this.x * this.x + this.y * this.y))
+        x = 1
+        y = 1
       }
+
+      return Point.at(Math.sign(this.x) * x, Math.sign(this.y) * x)
     }
 
     distance(p) {
@@ -176,7 +179,9 @@
   }
   class DynamicEntity {
     hash
+    lastDrawPosition
     previousPosition
+    previousDirection = Point.DOWN
     _position
     _direction = Point.DOWN
     _velocity = 0
@@ -189,6 +194,7 @@
     constructor(position) {
       this.hash = `${this.constructor.name}#${entityHashIndex++}`
       this._position = position
+      this.lastDrawPosition = position
       this.previousPosition = position
 
       // extending class must provide collisionShape, hitShape and sprite
@@ -228,6 +234,10 @@
       if (!this._position.equals(this.previousPosition)) {
         this.previousPosition = this._position
       }
+
+      if (!this._direction.equals(this.previousDirection)) {
+        this.previousDirection = this._direction
+      }
     }
   }
 
@@ -261,6 +271,10 @@
   let requestAnimationFrameId
   let keysDown = {}
   let keyUpEvent
+  let gamePixel;
+  let gamePixelData;
+  let bgPixel;
+  let bgPixelData;
 
   // public state context
   let ctx = {
@@ -338,8 +352,12 @@
 
     ctx.bgContext = bgCanvas.getContext('2d')
     ctx.bgContext.imageSmoothingEnabled = false
+    bgPixel = ctx.bgContext.createImageData(1, 1)
+    bgPixelData = bgPixel.data
     ctx.gameContext = gameCanvas.getContext('2d')
     ctx.gameContext.imageSmoothingEnabled = false
+    gamePixel = ctx.gameContext.createImageData(1, 1)
+    gamePixelData = gamePixel.data
   }
 
   function clearCanvas() {
@@ -469,8 +487,6 @@
           entity.position = entity.previousPosition
         }
       }
-
-      if (entity.update) entity.update()
     })
   }
 
@@ -530,11 +546,39 @@
   }
 
   function drawEntity(origin, entity, opts) {
-    let { position, sprite } = entity
-    if (sprite instanceof Function) {
-      sprite(position.subtract(origin).round())
+    let drawPosition
+
+    let position = entity.position.round()
+
+    // Smoothening out diagonal movement, if enabled.
+    // Works only if entities move along ideal diagonals
+    if (entity instanceof DynamicEntity &&
+      opts &&
+      opts.smoothDiagonalMovement &&
+      entity.direction.x != 0 &&
+      entity.direction.y != 0) {
+      let deltaX = Math.abs(position.x - entity.lastDrawPosition.x)
+      let deltaY = Math.abs(position.y - entity.lastDrawPosition.y)
+      if (deltaX <= 1 && deltaY <= 1 && deltaX != deltaY) {
+        drawPosition = entity.lastDrawPosition
+      } else {
+        drawPosition = position
+      }
     } else {
-      let { x, y } = position.subtract(origin).round()
+      drawPosition = position
+    }
+
+    if (entity instanceof DynamicEntity) {
+      entity.lastDrawPosition = drawPosition
+      entity.update()
+    }
+
+    let sprite = entity.sprite
+
+    if (sprite instanceof Function) {
+      sprite(drawPosition.subtract(origin))
+    } else {
+      let { x, y } = drawPosition.subtract(origin)
       let sprites = ctx.sprites[sprite.name]
       let spriteFrame
 
@@ -560,24 +604,54 @@
         spriteFrame = sprites
       }
 
+      if (opts && opts.drawTraces && entity instanceof DynamicEntity) {
+        drawBgPixel(x, y, 120, 120, 120)
+      }
+
       ctx.gameContext.drawImage(spriteFrame, x, y)
 
       if (entity.collisionShape && opts && opts.drawCollisionShapes) {
         let { position, width, height } = entity.collisionShape
         let shapePosition = position.subtract(origin).round()
-        ctx.gameContext.strokeStyle = 'green'
-        ctx.gameContext.lineWidth = 1
-        ctx.gameContext.strokeRect(shapePosition.x, shapePosition.y, width, height)
+        drawPerfectGameRect(shapePosition.x, shapePosition.y, width, height, 0, 200, 0)
       }
 
       if (entity.hitShape && opts && opts.drawHitShapes) {
         let { position, width, height } = entity.hitShape
         let shapePosition = position.subtract(origin).round()
-        ctx.gameContext.strokeStyle = 'red'
-        ctx.gameContext.lineWidth = 1
-        ctx.gameContext.strokeRect(shapePosition.x, shapePosition.y, width, height)
+        drawPerfectGameRect(shapePosition.x, shapePosition.y, width, height, 200, 0, 0)
       }
     }
+  }
+
+  function drawPerfectGameRect(sx, sy, width, height, r, g, b) {
+    let left = sx
+    let right = sx + width - 1
+    let top = sy
+    let bottom = sy + height - 1
+    for (let x = left; x <= right; x++) {
+      for (let y = top; y <= bottom; y++) {
+        if (y == top || y == bottom || x == left || x == right) {
+          drawGamePixel(x, y, r, g, b)
+        }
+      }
+    }
+  }
+
+  function drawGamePixel(x, y, r, g, b) {
+    gamePixelData[0] = r
+    gamePixelData[1] = g
+    gamePixelData[2] = b
+    gamePixelData[3] = 255
+    ctx.gameContext.putImageData(gamePixel, x, y)
+  }
+
+  function drawBgPixel(x, y, r, g, b) {
+    bgPixelData[0] = r
+    bgPixelData[1] = g
+    bgPixelData[2] = b
+    bgPixelData[3] = 255
+    ctx.bgContext.putImageData(bgPixel, x, y)
   }
 
   function sendSignal(name, arg) {
