@@ -37,9 +37,14 @@
     const CAMERA_HMARGIN = 40
     const CAMERA_VMARGIN = 40
 
+    let drawCollisionShapes = false
+    let drawHitShapes = false
+    let drawTraces = false
+
     Dabu.loadImage('sprite1', 'sprite1.png')
 
     function loadSprite(name, tileX, tileY, opts) {
+      opts = opts || {}
       Dabu.loadSprite(name, 'sprite1', Point.at(tileX, tileY).multiply(TILE_SIZE), TILE_SIZE, TILE_SIZE, opts)
     }
 
@@ -350,6 +355,21 @@
           ctx.keys.x = false
         }
 
+        if (ctx.keys.c) {
+          drawCollisionShapes = !drawCollisionShapes
+          ctx.keys.c = false
+        }
+
+        if (ctx.keys.h) {
+          drawHitShapes = !drawHitShapes
+          ctx.keys.h = false
+        }
+
+        if (ctx.keys.t) {
+          drawTraces = !drawTraces
+          ctx.keys.t = false
+        }
+
         player.position = player.position.add(player.direction.multiply(player.velocity * secondsPassed))
 
         if (Dabu.getCollisions(player, scene.getGroup('islands')).length > 0) {
@@ -386,9 +406,9 @@
         updateCamera(scene)
         Dabu.runPhysics(scene, secondsPassed)
         Dabu.drawScene(scene, {
-          drawCollisionShapes: false,
-          drawHitShapes: false,
-          drawTraces: false,
+          drawCollisionShapes: drawCollisionShapes,
+          drawHitShapes: drawHitShapes,
+          drawTraces: drawTraces,
           smoothDiagonalMovement: true
         })
       },
