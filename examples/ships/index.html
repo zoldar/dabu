@@ -26,7 +26,7 @@
     } = Dabu;
 
     const TILE_SIZE = 16
-    const MAX_FPS = 30
+    const MAX_FPS = 16
     const BG_COLOR = '#c7f0d8'
     const COLOR = '#43523d'
     const WIDTH = 160
@@ -36,6 +36,23 @@
     const MAX_VELOCITY = 16
     const CAMERA_HMARGIN = 38
     const CAMERA_VMARGIN = 38
+
+    const DIRECTIONS = [
+      Point.UP,
+      Point.DOWN,
+      Point.LEFT,
+      Point.RIGHT,
+      Point.UP.add(Point.RIGHT).normalize(),
+      Point.UP.add(Point.LEFT).normalize(),
+      Point.DOWN.add(Point.RIGHT).normalize(),
+      Point.DOWN.add(Point.LEFT).normalize()
+    ]
+
+    // generated map settings
+    const MAP_WIDTH_TILES = 32
+    const MAP_HEIGHT_TILES = 16
+    const LANDMASS_PERCENT = 20
+    const ENEMIES_COUNT = 20
 
     let drawCollisionShapes = false
     let drawHitShapes = false
@@ -81,6 +98,23 @@
     loadSprite('island', 7, 5, { count: 2 })
     Dabu.defineSprite('ball_ascending', ['ball1', 'ball2', 'ball3', 'ball4'])
     Dabu.defineSprite('ball_descending', ['ball4', 'ball3', 'ball2', 'ball1'])
+
+    class MapWall extends StaticEntity {
+      constructor(position, width, height) {
+        super(
+          position,
+          MapWall.spriteFunc(width, height),
+          new BoundingBox(position, Point.at(0, 0), width, height)
+        )
+      }
+
+      static spriteFunc(width, height) {
+        return ({ x, y }) => {
+          ctx.gameContext.fillStyle = COLOR
+          ctx.gameContext.fillRect(x, y, width, height)
+        }
+      }
+    }
 
     class Island extends StaticEntity {
       zindex = 2
@@ -136,17 +170,6 @@
     }
 
     class EnemyShip extends DynamicEntity {
-      DIRECTIONS = [
-        Point.UP,
-        Point.DOWN,
-        Point.LEFT,
-        Point.RIGHT,
-        Point.UP.add(Point.RIGHT).normalize(),
-        Point.UP.add(Point.LEFT).normalize(),
-        Point.DOWN.add(Point.RIGHT).normalize(),
-        Point.DOWN.add(Point.LEFT).normalize()
-      ]
-
       zindex = 1
 
       width = TILE_SIZE
@@ -161,8 +184,8 @@
 
         let that = this
         setInterval(() => {
-          that.direction = Dabu.sample(this.DIRECTIONS)
-        }, 8000)
+          that.direction = Dabu.sample(DIRECTIONS)
+        }, 5000)
       }
 
       update() {
@@ -282,6 +305,67 @@
       scene.add(new CannonBall(ballPosition, direction), 'cannonballs')
     }
 
+    function buildMap(scene) {
+      let islandCount = Math.floor(MAP_WIDTH_TILES * MAP_HEIGHT_TILES * LANDMASS_PERCENT / 100)
+      let mapSlots = []
+      let xs = [...Array(MAP_WIDTH_TILES).keys()]
+      let ys = [...Array(MAP_HEIGHT_TILES).keys()]
+
+      // top wall
+      scene.add(new MapWall(
+        Point.at(-1 * TILE_SIZE, -1 * TILE_SIZE),
+        (MAP_WIDTH_TILES + 2) * TILE_SIZE,
+        TILE_SIZE
+      ))
+
+      // bottom wall
+      scene.add(new MapWall(
+        Point.at(-1 * TILE_SIZE, MAP_HEIGHT_TILES * TILE_SIZE),
+        (MAP_WIDTH_TILES + 2) * TILE_SIZE,
+        TILE_SIZE
+      ))
+
+      // left wall
+      scene.add(new MapWall(
+        Point.at(-1 * TILE_SIZE, 0),
+        TILE_SIZE,
+        MAP_HEIGHT_TILES * TILE_SIZE
+      ))
+
+      // right wall
+      scene.add(new MapWall(
+        Point.at(MAP_WIDTH_TILES * TILE_SIZE, 0),
+        TILE_SIZE,
+        MAP_HEIGHT_TILES * TILE_SIZE
+      ))
+
+      xs.forEach(x => {
+        ys.forEach(y => {
+          mapSlots.push(Point.at(x, y))
+        })
+      })
+
+      for (let i = 0; i < islandCount; i++) {
+        let point = Dabu.sample(mapSlots)
+        mapSlots = mapSlots.filter(p => p.x != point.x || p.y != point.y)
+
+        scene.add(new Island(point.multiply(TILE_SIZE)), ['islands', 'hit_targets'])
+      }
+
+      for (let i = 0; i < ENEMIES_COUNT; i++) {
+        let point = Dabu.sample(mapSlots)
+        mapSlots = mapSlots.filter(p => p.x != point.x || p.y != point.y)
+
+        scene.add(new EnemyShip(
+          point.multiply(TILE_SIZE),
+          Dabu.sample(DIRECTIONS)),
+          ['enemies', 'hit_targets']
+        )
+      }
+
+      let spawnPoint = Dabu.sample(mapSlots)
+      scene.entities.player = new Player(spawnPoint.multiply(TILE_SIZE))
+    }
 
     Dabu.init('stage', WIDTH, HEIGHT)
 
@@ -292,12 +376,7 @@
 
         let scene = new Scene()
 
-        scene.entities.player = new Player(Point.at(64, 32))
-        scene.add(new Island(Point.at(16, 16)), ['islands', 'hit_targets'])
-        scene.add(new Island(Point.at(96, 64)), ['islands', 'hit_targets'])
-        scene.add(new Island(Point.at(96, 32)), ['islands', 'hit_targets'])
-        scene.add(new EnemyShip(Point.at(110, 40), Point.RIGHT), ['enemies', 'hit_targets'])
-        scene.add(new EnemyShip(Point.at(30, 70), Point.RIGHT), ['enemies', 'hit_targets'])
+        buildMap(scene)
 
         scene.cameraSubject = 'player'
         scene.cameraMarginH = CAMERA_HMARGIN
