@@ -52,7 +52,7 @@
     }
 
     normalize() {
-      let x = 0.75, y = 0.75
+      let x = 0.70, y = 0.70
 
       if (this.x == 0 || this.y == 0) {
         x = 1
@@ -82,6 +82,14 @@
   Point.RIGHT = Point.at(1, 0)
 
   class Scene {
+    cameraVelocity = 0
+    cameraDirection = Point.DOWN
+    cameraSubject
+    // IMPORTANT: camera margins must allow for at least 1 pixel extra
+    // on each axis of biggest entity subject to avoid smoothness issues
+    cameraMarginH = 0
+    cameraMarginV = 0
+    cameraLastOrigin = Point.at(0, 0)
     cameraOrigin = Point.at(0, 0)
     groups = {}
     entities = {}
@@ -183,6 +191,8 @@
     previousPosition
     previousDirection = Point.DOWN
     _position
+    width
+    height
     _direction = Point.DOWN
     _velocity = 0
     kinetic = true
@@ -244,6 +254,8 @@
   class StaticEntity {
     hash
     position
+    width
+    height
     sprite
     collisionShape
     hitShape
@@ -278,6 +290,8 @@
 
   // public state context
   let ctx = {
+    width: null,
+    height: null,
     bgContext: null,
     gameContext: null,
     images: {},
@@ -349,6 +363,9 @@
 
     parent.appendChild(bgCanvas)
     parent.appendChild(gameCanvas)
+
+    ctx.width = width
+    ctx.height = height
 
     ctx.bgContext = bgCanvas.getContext('2d')
     ctx.bgContext.imageSmoothingEnabled = false
@@ -535,6 +552,14 @@
   }
 
   function drawScene(scene, opts) {
+    opts = opts || {}
+    updateCamera(scene)
+
+    // must be set *after* updateCamera
+    opts.cameraVelocity = scene.cameraVelocity
+    opts.cameraDirection = scene.cameraDirection
+    opts.cameraLastOrigin = scene.cameraLastOrigin
+
     clearScreen()
     Object.values(
       scene.entities
@@ -545,6 +570,70 @@
     )
   }
 
+  function updateCamera(scene) {
+    scene.cameraLastOrigin = scene.cameraOrigin
+
+    let subject = scene.entities[scene.cameraSubject]
+
+    if (subject && subject instanceof DynamicEntity) {
+      scene.cameraDirection = subject.direction
+
+      let { x: originX, y: originY } = scene.cameraOrigin
+      let { x, y } = subject.position.round()
+
+      // diagonal movement smoothing
+      if (subject.direction.x != 0 && subject.direction.y != 0) {
+        let deltaX = Math.abs(x - subject.lastDrawPosition.x)
+        let deltaY = Math.abs(y - subject.lastDrawPosition.y)
+        if (deltaX <= 1 && deltaY <= 1 && deltaX != deltaY) {
+          x = subject.lastDrawPosition.x
+          y = subject.lastDrawPosition.y
+        }
+      }
+
+      let screenX = x - originX
+      let screenY = y - originY
+
+      let newVelocity = 0
+      let newX = originX
+      let newY = originY
+
+      if (screenX <= scene.cameraMarginH) {
+        if (subject.direction.x < 0) {
+          newVelocity = subject.velocity
+        }
+        newVelocity = subject.velocity
+        newX = x - scene.cameraMarginH
+      } else if (screenX + subject.width >= ctx.width - scene.cameraMarginH) {
+        if (subject.direction.x > 0) {
+          newVelocity = subject.velocity
+        }
+        newVelocity = subject.velocity
+        newX = (x + subject.width) - ctx.width + scene.cameraMarginH
+      }
+
+      if (screenY <= scene.cameraMarginV) {
+        if (subject.direction.y < 0) {
+          newVelocity = subject.velocity
+        }
+        newY = y - scene.cameraMarginV
+      } else if (screenY + subject.height >= ctx.height - scene.cameraMarginV) {
+        if (subject.direction.y > 0) {
+          newVelocity = subject.velocity
+        }
+        newY = (y + subject.height) - ctx.height + scene.cameraMarginV
+      }
+
+      scene.cameraVelocity = newVelocity
+      scene.cameraOrigin = Point.at(newX, newY)
+    } else if (subject && subject instanceof StaticEntity) {
+      scene.cameraOrigin = Point.at(
+        subject.position.x - (ctx.width - subject.width) / 2,
+        subject.position.y - (ctx.height - subject.height) / 2
+      )
+    }
+  }
+
   function drawEntity(origin, entity, opts) {
     let drawPosition
 
@@ -553,8 +642,9 @@
     // Smoothening out diagonal movement, if enabled.
     // Works only if entities move along ideal diagonals
     if (entity instanceof DynamicEntity &&
-      opts &&
+      opts.pixelPerfectMovement &&
       opts.smoothDiagonalMovement &&
+      entity.velocity > 0 &&
       entity.direction.x != 0 &&
       entity.direction.y != 0) {
       let deltaX = Math.abs(position.x - entity.lastDrawPosition.x)
@@ -566,6 +656,46 @@
       }
     } else {
       drawPosition = position
+    }
+
+    // Smoothening entity movement relative to moving camera
+    if (entity instanceof DynamicEntity &&
+      opts.pixelPerfectMovement &&
+      opts.cameraVelocity > 0 &&
+      entity.velocity > 0 &&
+      (entity.velocity != opts.cameraVelocity ||
+        !entity.direction.equals(opts.cameraDirection))) {
+      let previousScreenPosition = entity.lastDrawPosition.subtract(opts.cameraLastOrigin)
+      let currentScreenPosition = drawPosition.subtract(origin)
+      let screenDelta = currentScreenPosition.subtract(previousScreenPosition)
+      let cameraDirectionX = opts.cameraDirection.x
+      let cameraDirectionY = opts.cameraDirection.y
+      let entityDirectionX = entity.direction.x
+      let entityDirectionY = entity.direction.y
+
+      if ((cameraDirectionX != 0 && Math.sign(cameraDirectionX) == Math.sign(entityDirectionX)) ||
+        (cameraDirectionY != 0 && Math.sign(cameraDirectionY) == Math.sign(entityDirectionY))) {
+        let cameraVelocityX = Math.abs(cameraDirectionX * opts.cameraVelocity)
+        let cameraVelocityY = Math.abs(cameraDirectionY * opts.cameraVelocity)
+        let entityVelocityX = Math.abs(entityDirectionX * entity.velocity)
+        let entityVelocityY = Math.abs(entityDirectionY * entity.velocity)
+
+        if (cameraVelocityX > entityVelocityX && Math.sign(screenDelta.x) == Math.sign(cameraDirectionX)) {
+          // entity moving forward relative to camera when it shouldn't
+          drawPosition.x = drawPosition.x - Math.sign(screenDelta.x)
+        } else if (cameraVelocityX < entityVelocityX && Math.sign(screenDelta.x) == -1 * Math.sign(cameraDirectionX)) {
+          // entity moving backward relative to camera when it shouldn't
+          drawPosition.x = drawPosition.x - Math.sign(screenDelta.x)
+        }
+
+        if (cameraVelocityY > entityVelocityY && Math.sign(screenDelta.y) == Math.sign(cameraDirectionY)) {
+          // entity moving forward relative to camera when it shouldn't
+          drawPosition.y = drawPosition.y - Math.sign(screenDelta.y)
+        } else if (cameraVelocityY < entityVelocityY && Math.sign(screenDelta.y) == -1 * Math.sign(cameraDirectionY)) {
+          // entity moving backward relative to camera when it shouldn't
+          drawPosition.y = drawPosition.y - Math.sign(screenDelta.y)
+        }
+      }
     }
 
     if (entity instanceof DynamicEntity) {

@@ -34,8 +34,8 @@
     const ACCELERATION = 6
     const DECELERATION = 8
     const MAX_VELOCITY = 16
-    const CAMERA_HMARGIN = 40
-    const CAMERA_VMARGIN = 40
+    const CAMERA_HMARGIN = 38
+    const CAMERA_VMARGIN = 38
 
     let drawCollisionShapes = false
     let drawHitShapes = false
@@ -85,6 +85,9 @@
     class Island extends StaticEntity {
       zindex = 2
 
+      width = TILE_SIZE
+      height = TILE_SIZE
+
       constructor(position) {
         super(
           position,
@@ -117,6 +120,9 @@
       zindex = 1
       kinetic = false
 
+      width = TILE_SIZE
+      height = TILE_SIZE
+
       constructor(position) {
         super(position)
         this.collisionShape = new BoundingBox(position, Point.at(3, 3), TILE_SIZE - 6, TILE_SIZE - 6)
@@ -143,6 +149,9 @@
 
       zindex = 1
 
+      width = TILE_SIZE
+      height = TILE_SIZE
+
       constructor(position, direction) {
         super(position)
         this.collisionShape = new BoundingBox(position, Point.at(3, 3), TILE_SIZE - 6, TILE_SIZE - 6)
@@ -153,7 +162,7 @@
         let that = this
         setInterval(() => {
           that.direction = Dabu.sample(this.DIRECTIONS)
-        }, 5000)
+        }, 8000)
       }
 
       update() {
@@ -163,6 +172,9 @@
     }
 
     class Ripple extends StaticEntity {
+      width = TILE_SIZE
+      height = TILE_SIZE
+
       constructor(position, direction) {
         let we = ''
         if (direction.x > 0) we = 'e'
@@ -181,6 +193,8 @@
 
     class CannonBall extends DynamicEntity {
       zindex = 3
+      width = TILE_SIZE
+      height = TILE_SIZE
       firePosition
       shotDistance = 35
       _velocity = 16
@@ -210,6 +224,8 @@
 
     class Plonk extends StaticEntity {
       zindex = 1
+      width = TILE_SIZE
+      height = TILE_SIZE
 
       constructor(position) {
         super(position, new Sprite('plonk', 6, () => {
@@ -220,6 +236,8 @@
 
     class Hit extends StaticEntity {
       zindex = 4
+      width = TILE_SIZE
+      height = TILE_SIZE
 
       constructor(position) {
         super(position, new Sprite('hit', 6, () => {
@@ -229,6 +247,9 @@
     }
 
     class Blast extends StaticEntity {
+      width = TILE_SIZE
+      height = TILE_SIZE
+
       constructor(position, direction) {
         let we = ''
         if (direction.x > 0) we = 'e'
@@ -261,40 +282,6 @@
       scene.add(new CannonBall(ballPosition, direction), 'cannonballs')
     }
 
-    function updateCamera(scene) {
-      let { player } = scene.entities
-      let { x: originX, y: originY } = scene.cameraOrigin
-      let { x, y } = player.position.round()
-
-      // diagonal movement smoothing
-      if (player.direction.x != 0 && player.direction.y != 0) {
-        let deltaX = Math.abs(x - player.lastDrawPosition.x)
-        let deltaY = Math.abs(y - player.lastDrawPosition.y)
-        if (deltaX <= 1 && deltaY <= 1 && deltaX != deltaY) {
-          x = player.lastDrawPosition.x
-          y = player.lastDrawPosition.y
-        }
-      }
-
-      let screenX = x - originX
-      let screenY = y - originY
-
-      let newX = originX
-      if (screenX < CAMERA_HMARGIN) {
-        newX = x - CAMERA_HMARGIN
-      } else if (screenX + TILE_SIZE > WIDTH - CAMERA_HMARGIN) {
-        newX = (x + TILE_SIZE) - WIDTH + CAMERA_HMARGIN
-      }
-
-      let newY = originY
-      if (screenY < CAMERA_VMARGIN) {
-        newY = y - CAMERA_VMARGIN
-      } else if (screenY + TILE_SIZE > HEIGHT - CAMERA_VMARGIN) {
-        newY = (y + TILE_SIZE) - HEIGHT + CAMERA_VMARGIN
-      }
-
-      scene.cameraOrigin = Point.at(newX, newY)
-    }
 
     Dabu.init('stage', WIDTH, HEIGHT)
 
@@ -305,12 +292,16 @@
 
         let scene = new Scene()
 
-        scene.entities.player = new Player(Point.at(32, 32))
+        scene.entities.player = new Player(Point.at(64, 32))
         scene.add(new Island(Point.at(16, 16)), ['islands', 'hit_targets'])
         scene.add(new Island(Point.at(96, 64)), ['islands', 'hit_targets'])
         scene.add(new Island(Point.at(96, 32)), ['islands', 'hit_targets'])
-        scene.add(new EnemyShip(Point.at(110, 40), Point.DOWN), ['enemies', 'hit_targets'])
-        scene.add(new EnemyShip(Point.at(60, 50), Point.LEFT), ['enemies', 'hit_targets'])
+        scene.add(new EnemyShip(Point.at(110, 40), Point.RIGHT), ['enemies', 'hit_targets'])
+        scene.add(new EnemyShip(Point.at(30, 70), Point.RIGHT), ['enemies', 'hit_targets'])
+
+        scene.cameraSubject = 'player'
+        scene.cameraMarginH = CAMERA_HMARGIN
+        scene.cameraMarginV = CAMERA_VMARGIN
 
         return scene
       },
@@ -328,17 +319,22 @@
 
         if (direction.x != 0 || direction.y != 0) {
           player.direction = direction.normalize()
+
           if (player.velocity < MAX_VELOCITY) {
             player.velocity += ACCELERATION * secondsPassed
           } else {
             player.velocity = MAX_VELOCITY
           }
+
+          // player.velocity = MAX_VELOCITY
         } else {
           if (player.velocity > 0) {
             player.velocity -= DECELERATION * secondsPassed
           } else {
             player.velocity = 0
           }
+
+          // player.velocity = 0
         }
 
         if (!oldDirection.equals(player.direction) || oldVelocity == 0 && player.velocity > 0) {
@@ -403,12 +399,12 @@
           delete ctx.signals.remove
         }
 
-        updateCamera(scene)
         Dabu.runPhysics(scene, secondsPassed)
         Dabu.drawScene(scene, {
           drawCollisionShapes: drawCollisionShapes,
           drawHitShapes: drawHitShapes,
           drawTraces: drawTraces,
+          pixelPerfectMovement: true,
           smoothDiagonalMovement: true
         })
       },
