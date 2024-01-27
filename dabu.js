@@ -82,17 +82,35 @@
   Point.RIGHT = Point.at(1, 0)
 
   class Scene {
-    cameraVelocity = 0
-    cameraDirection = Point.DOWN
+    name
+    cameraVelocity
+    cameraDirection
     cameraSubject
     // IMPORTANT: camera margins must allow for at least 1 pixel extra
     // on each axis of biggest entity subject to avoid smoothness issues
-    cameraMarginH = 0
-    cameraMarginV = 0
-    cameraLastOrigin = Point.at(0, 0)
-    cameraOrigin = Point.at(0, 0)
-    groups = {}
-    entities = {}
+    cameraMarginH
+    cameraMarginV
+    cameraLastOrigin
+    cameraOrigin
+    groups
+    entities
+
+    constructor() {
+      this.reset()
+    }
+
+    reset(name) {
+      this.name = name
+      this.cameraVelocity = 0
+      this.cameraDirection = Point.DOWN
+      this.cameraSubject
+      this.cameraMarginH = 0
+      this.cameraMarginV = 0
+      this.cameraLastOrigin = Point.at(0, 0)
+      this.cameraOrigin = Point.at(0, 0)
+      this.groups = {}
+      this.entities = {}
+    }
 
     has(e) {
       return this.entities[e.hash] !== undefined
@@ -275,6 +293,45 @@
       this.sprite = sprite
       this.collisionShape = collisionShape
       this.hitShape = hitShape
+    }
+  }
+
+  class FixedEntity {
+    hash
+    position
+    sprite
+    zindex = 0
+
+    constructor(position, sprite) {
+      this.hash = `${this.constructor.name}#${entityHashIndex++}`
+      this.position = position
+      this.sprite = sprite
+    }
+  }
+
+  class Text extends FixedEntity {
+    fontName
+    opts
+
+    constructor(position, fontName, text, opts) {
+      super(
+        position,
+        Text.spriteFunc(fontName, text, opts)
+      )
+
+      this.zindex = opts && opts.zindex || 0
+      this.fontName = fontName
+      this.opts = opts
+    }
+
+    update(text) {
+      this.sprite = Text.spriteFunc(this.fontName, text, this.opts)
+    }
+
+    static spriteFunc(fontName, text, opts) {
+      return ({ x, y }) => {
+        drawText(x, y, fontName, text, opts)
+      }
     }
   }
 
@@ -609,13 +666,34 @@
     })
   }
 
-  function drawText(x, y, fontName, text) {
+  function drawText(x, y, fontName, text, opts) {
+    opts = opts || {}
     let font = fonts[fontName]
-    let charX = x
 
+    let textLength = 0
+    text.split('').forEach(char => {
+      textLength += font[char].width
+    })
+
+    let realX = x
+    let realY = y;
+
+    if (opts.align && opts.align.indexOf('vcenter') > -1) {
+      realY = (gameCanvas.height / 2) - (font.height / 2) + y;
+    } else if (opts.align && opts.align.indexOf('vbottom') > -1) {
+      realY = gameCanvas.height - font.height + y;
+    }
+
+    if (opts.align && opts.align.indexOf('hcenter') > -1) {
+      realX = (gameCanvas.width / 2) - (textLength / 2) + x;
+    } else if (opts.align && opts.align.indexOf('hright') > -1) {
+      realX = gameCanvas.width - textLength + x;
+    }
+
+    let charX = realX
     text.split('').forEach(char => {
       if (font[char].img) {
-        ctx.gameContext.drawImage(font[char].img, charX, y)
+        ctx.gameContext.drawImage(font[char].img, charX, realY)
       }
       charX += font[char].width
     })
@@ -774,11 +852,13 @@
     }
 
     let sprite = entity.sprite
+    let finalPosition = entity instanceof FixedEntity ?
+      drawPosition : drawPosition.subtract(origin)
 
     if (sprite instanceof Function) {
-      sprite(drawPosition.subtract(origin), entity.direction, entity.velocity)
+      sprite(finalPosition, entity.direction, entity.velocity)
     } else {
-      let { x, y } = drawPosition.subtract(origin)
+      let { x, y } = finalPosition
       let sprites = ctx.sprites[sprite.name]
       let spriteFrame
 
@@ -874,6 +954,8 @@
     Sprite,
     StaticEntity,
     DynamicEntity,
+    FixedEntity,
+    Text,
 
     // Public API
     loadImage,
