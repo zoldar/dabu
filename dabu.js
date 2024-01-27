@@ -456,6 +456,11 @@
   }
 
   function setupControls() {
+    let touchDelta = 10;
+    let touchStartX = -1;
+    let touchStartY = -1;
+    let touchStartTime = -1;
+
     window.addEventListener('keydown', e => {
       // disable key repeating
       if (keysDown[e.key]) return
@@ -501,6 +506,71 @@
       })
     })
 
+    window.addEventListener("touchstart", e => {
+      if (e.touches) {
+        touchStartX = e.touches[0].pageX;
+        touchStartY = e.touches[0].pageY;
+        touchStartTime = performance.now();
+        e.preventDefault();
+      }
+    });
+
+    window.addEventListener("touchend", e => {
+      let [mouseX, mouseY] = translateToCanvasPosition(touchStartX, touchStartY);
+      let handlerHit = false;
+
+      clickHandlers.forEach(({ box, callback }, key) => {
+        if (mouseX >= box.position.x && mouseX < box.position.x + box.width &&
+          mouseY >= box.position.y && mouseY < box.position.y + box.height) {
+          handlerHit = true;
+          callback();
+        }
+      });
+
+      touchStartX = -1;
+      touchStartY = -1;
+      setArrowKey(null);
+
+      if (handlerHit) return;
+
+      if (performance.now() - touchStartTime < 200) {
+        ctx.keys[' '] = true;
+      }
+
+      e.preventDefault();
+    });
+
+    window.addEventListener("touchmove", e => {
+      if (e.touches) {
+        let touchX = e.touches[0].pageX;
+        let touchY = e.touches[0].pageY;
+
+        let dirX = touchX - touchStartX;
+        let dirY = touchY - touchStartY;
+
+        if (Math.abs(dirY) > touchDelta) {
+          if (dirY > 0) setArrowKey('ArrowDown');
+          else setArrowKey('ArrowUp');
+        }
+
+        let dirRatio = Math.abs(dirX) / Math.abs(dirY)
+        if (Math.abs(dirX) > touchDelta && dirRatio > 0.8 && dirRatio < 1.2) {
+          if (dirX > 0) {
+            ctx.keys['ArrowRight'] = true
+            ctx.keys['ArrowLeft'] = false
+          } else {
+            ctx.keys['ArrowRight'] = false
+            ctx.keys['ArrowLeft'] = true
+          }
+        } else if (Math.abs(dirX) > touchDelta) {
+          if (dirX > 0) setArrowKey('ArrowRight');
+          else setArrowKey('ArrowLeft');
+        }
+
+        e.preventDefault();
+      }
+    });
+
     window.addEventListener("mousedown", e => {
       ctx.mouseButton = true;
     })
@@ -508,6 +578,12 @@
     window.addEventListener("mouseup", e => {
       ctx.mouseButton = false;
     })
+  }
+
+  function setArrowKey(pressedKey) {
+    ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].forEach(key => {
+      ctx.keys[key] = key === pressedKey;
+    });
   }
 
   function translateToCanvasPosition(x, y) {

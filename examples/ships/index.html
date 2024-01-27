@@ -60,6 +60,7 @@
     let drawHitShapes = false
     let drawTraces = false
     let introPlayed = false
+    let firingSide = 'left'
 
     Dabu.loadFont('axones', '../../')
     Dabu.loadSound('blip1', '../../assets/nokia_sound_pack/blip1.mp3')
@@ -517,6 +518,11 @@
         fireCannon(scene, 'right')
         Dabu.playSound('blip1')
         ctx.keys.x = false
+      } else if (ctx.keys[' ']) {
+        fireCannon(scene, firingSide)
+        Dabu.playSound('blip1')
+        firingSide = firingSide == 'left' ? 'right' : 'left'
+        ctx.keys[' '] = false
       }
 
       if (ctx.keys.c) {
