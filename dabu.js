@@ -597,8 +597,8 @@
   function loadSound(name, source) {
     soundPromises.push(new Promise(resolve => {
       let sound = new Audio(source)
-      sound.addEventListener('loadeddata', () => {
-        sounds[name] = sound
+      sounds[name] = sound
+      sound.addEventListener('canplaythrough', () => {
         resolve()
       })
     }))
