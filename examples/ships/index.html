@@ -66,6 +66,7 @@
       Dabu.loadSprite(name, 'sprite1', Point.at(tileX, tileY).multiply(TILE_SIZE), TILE_SIZE, TILE_SIZE, opts)
     }
 
+    Dabu.loadFont('axones', '../../')
     loadSprite('ship_n', 0, 0)
     loadSprite('ship_s', 1, 0)
     loadSprite('ship_w', 2, 0)
@@ -524,6 +525,8 @@
           pixelPerfectMovement: true,
           smoothDiagonalMovement: true
         })
+
+        Dabu.drawText(5, 0, 'axones', `Enemies: ${scene.getGroup('enemies').length}`)
       },
       { maxFPS: MAX_FPS }
     )

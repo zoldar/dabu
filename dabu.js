@@ -282,7 +282,9 @@
   let entityHashIndex = 0
   let imagePromises = []
   let spritePromises = []
+  let fontPromises = []
   let definedSprites = []
+  let fonts = {}
   let keyHandlers = new Map()
   let clickHandlers = new Map()
   let bgCanvas
@@ -348,6 +350,8 @@
       })
     }).then(() => {
       return Promise.all(spritePromises.map(p => p()))
+    }).then(() => {
+      return Promise.all(fontPromises.map(p => p()))
     }).then(() => {
       definedSprites.forEach(cb => cb())
 
@@ -529,6 +533,52 @@
     }))
   }
 
+  const FONTS = {
+    axones: {
+      file: 'assets/axones.png',
+      width: 8,
+      height: 16,
+      charset: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,;:?!"\'+-=*%_()',
+      addWhitespace: true,
+      spacing: [[4, " "], [8, "%"], [6, "MTWmw*"], [5, "ABCDGHKNOPQRSUVXYZabcdeghknopquvxyz023456789?_"], [4, "EFIJLfjrs1!\"+-="], [3, "t.,;:'()"], [2, "il"]]
+    }
+  }
+
+  function loadFont(name, pathPrefix) {
+    let { file, width, height, charset, spacing } = FONTS[name]
+    let filePath = `${pathPrefix}${file}`
+    let spacingMap = {}
+    spacing.forEach(([spacing, chars]) => {
+      chars.split('').forEach(char => {
+        spacingMap[char] = spacing
+      })
+    })
+
+    loadImage(name, filePath)
+
+    fonts[name] = { height: height }
+
+    if (FONTS[name].addWhitespace) {
+      fonts[name][' '] = { img: null, width: spacingMap[' '] }
+    }
+
+    fontPromises.push(() => new Promise(resolve => {
+      let fontSheet = ctx.images[name]
+      let { width: sheetWidth } = fontSheet
+      let charWidth = Math.floor(sheetWidth / width)
+
+      charset.split('').forEach((char, idx) => {
+        let x = (idx % charWidth) * width
+        let y = Math.floor(idx / charWidth) * height
+
+        createImageBitmap(fontSheet, x, y, width, height).then(bitmap => {
+          fonts[name][char] = { img: bitmap, width: spacingMap[char] }
+          resolve()
+        })
+      })
+    }))
+  }
+
   function loadSprite(name, imageSource, { x, y }, width, height, opts) {
     spritePromises.push(() => new Promise(resolve => {
       let { xGap = 0, count = 1 } = opts || {}
@@ -556,6 +606,18 @@
   function defineSprite(name, spriteNames) {
     definedSprites.push(() => {
       ctx.sprites[name] = spriteNames.map(n => ctx.sprites[n])
+    })
+  }
+
+  function drawText(x, y, fontName, text) {
+    let font = fonts[fontName]
+    let charX = x
+
+    text.split('').forEach(char => {
+      if (font[char].img) {
+        ctx.gameContext.drawImage(font[char].img, charX, y)
+      }
+      charX += font[char].width
     })
   }
 
@@ -816,10 +878,12 @@
     // Public API
     loadImage,
     loadSprite,
+    loadFont,
     defineSprite,
     init,
     load,
     clearScreen,
+    drawText,
     drawScene,
     runPhysics,
     getCollisions,
