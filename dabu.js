@@ -601,6 +601,7 @@
       sound.addEventListener('canplaythrough', () => {
         resolve()
       })
+      setTimeout(() => { resolve() }, 500)
     }))
   }
 
