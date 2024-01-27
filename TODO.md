@@ -7,9 +7,7 @@
 * [x] try implementing basics of boomerman as a test
 * [x] add text rendering
 * [x] add sounds
+* [ ] sound under Safari iOS
 * [ ] mobile friendly UI
 * [ ] collision layers for hits and collisions (collisions, mostly), when finally needed
-
-For later:
-
 * [ ] leaderboard?
