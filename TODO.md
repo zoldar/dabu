@@ -9,5 +9,6 @@
 * [x] add sounds
 * [x] sound under Safari iOS
 * [ ] more mobile friendly controls
+* [ ] explicit loading screen with progress
 * [ ] collision layers for hits and collisions (collisions, mostly), when finally needed
 * [ ] leaderboard?
