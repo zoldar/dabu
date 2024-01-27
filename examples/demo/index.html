@@ -41,8 +41,8 @@
         this.collisionShape = new BoundingBox(position, Point.at(2, 1), 4, 5)
       }
 
-      update() {
-        super.update()
+      updateAfter() {
+        super.updateAfter()
 
         let velocityStr = this._velocity > 0 ? 'walk' : 'stand'
         let name = 'player_' + velocityStr + '_' + this._direction.directionName()

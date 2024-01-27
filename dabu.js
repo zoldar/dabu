@@ -222,6 +222,7 @@
       if (this.hitShape) {
         this.hitShape.position = position
       }
+      this.update()
     }
 
     get direction() {
@@ -230,6 +231,7 @@
 
     set direction(direction) {
       this._direction = direction
+      this.update()
     }
 
     get velocity() {
@@ -238,9 +240,15 @@
 
     set velocity(velocity) {
       this._velocity = velocity
+      this.update()
     }
 
-    update() {
+    // called on every position, direction and velocity change
+    update() { }
+
+    // called once per frame just before drawing the scene
+    // but _after_ any movement smoothing
+    updateAfter() {
       if (!this._position.equals(this.previousPosition)) {
         this.previousPosition = this._position
       }
@@ -700,13 +708,13 @@
 
     if (entity instanceof DynamicEntity) {
       entity.lastDrawPosition = drawPosition
-      entity.update()
+      entity.updateAfter()
     }
 
     let sprite = entity.sprite
 
     if (sprite instanceof Function) {
-      sprite(drawPosition.subtract(origin))
+      sprite(drawPosition.subtract(origin), entity.direction, entity.velocity)
     } else {
       let { x, y } = drawPosition.subtract(origin)
       let sprites = ctx.sprites[sprite.name]

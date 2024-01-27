@@ -33,6 +33,7 @@
     const HEIGHT = 96
     const ACCELERATION = 12
     const DECELERATION = 10
+    const SHOT_DISTANCE = 35
     const MAX_VELOCITY = 24
     const CAMERA_HMARGIN = 38
     const CAMERA_VMARGIN = 38
@@ -153,19 +154,59 @@
     class Player extends DynamicEntity {
       zindex = 1
       kinetic = false
+      crosshairs
+
+      width = TILE_SIZE
+      height = TILE_SIZE
+
+      constructor(position, crosshairs) {
+        super(position)
+        this.collisionShape = new BoundingBox(position, Point.at(3, 3), TILE_SIZE - 6, TILE_SIZE - 6)
+        this.direction = Point.RIGHT
+        this.crosshairs = crosshairs
+        if (this.crosshairs) {
+          this.crosshairs.direction = this.direction
+          this.crosshairs.velocity = this.velocity
+        }
+      }
+
+      update() {
+        if (this.crosshairs) {
+          this.crosshairs.position = this.position
+          this.crosshairs.direction = this.direction
+          this.crosshairs.velocity = this.velocity
+        }
+      }
+
+      updateAfter() {
+        super.updateAfter()
+        shipSpriteUpdate(this)
+      }
+    }
+
+    class Crosshairs extends DynamicEntity {
+      zindex = 1
+      kinetic = false
+      direction = Point.RIGHT
+      velocity = 0
 
       width = TILE_SIZE
       height = TILE_SIZE
 
       constructor(position) {
         super(position)
-        this.collisionShape = new BoundingBox(position, Point.at(3, 3), TILE_SIZE - 6, TILE_SIZE - 6)
-        this.direction = Point.RIGHT
+        this.sprite = Crosshairs.spriteFunc()
       }
 
-      update() {
-        super.update()
-        shipSpriteUpdate(this)
+      static spriteFunc() {
+        return (position, direction) => {
+          let centerPosition = position.add(Point.at(TILE_SIZE / 2, TILE_SIZE / 2))
+          let positionLeft = centerPosition.add(Point.at(direction.y, -1 * direction.x).multiply(SHOT_DISTANCE + TILE_SIZE / 2))
+          let positionRight = centerPosition.add(Point.at(-1 * direction.y, direction.x).multiply(SHOT_DISTANCE + TILE_SIZE / 2))
+          ctx.gameContext.fillStyle = COLOR
+          ctx.gameContext.fillRect(positionLeft.x, positionLeft.y, 4, 4)
+          ctx.gameContext.fillRect(positionRight.x, positionRight.y, 4, 4)
+        }
       }
     }
 
@@ -188,8 +229,8 @@
         }, 5000)
       }
 
-      update() {
-        super.update()
+      updateAfter() {
+        super.updateAfter()
         shipSpriteUpdate(this)
       }
     }
@@ -219,7 +260,7 @@
       width = TILE_SIZE
       height = TILE_SIZE
       firePosition
-      shotDistance = 35
+      shotDistance = SHOT_DISTANCE
       _velocity = 16
 
       constructor(position, direction) {
@@ -229,8 +270,8 @@
         this.firePosition = position
       }
 
-      update() {
-        super.update()
+      updateAfter() {
+        super.updateAfter()
 
         if (!this.sprite) {
           let that = this
@@ -363,8 +404,9 @@
         )
       }
 
-      let spawnPoint = Dabu.sample(mapSlots)
-      scene.entities.player = new Player(spawnPoint.multiply(TILE_SIZE))
+      let spawnPoint = Dabu.sample(mapSlots).multiply(TILE_SIZE)
+      scene.entities.crosshairs = new Crosshairs(spawnPoint)
+      scene.entities.player = new Player(spawnPoint, scene.entities.crosshairs)
     }
 
     Dabu.init('stage', WIDTH, HEIGHT)
@@ -404,16 +446,12 @@
           } else {
             player.velocity = MAX_VELOCITY
           }
-
-          // player.velocity = MAX_VELOCITY
         } else {
           if (player.velocity > 0) {
             player.velocity -= DECELERATION * secondsPassed
           } else {
             player.velocity = 0
           }
-
-          // player.velocity = 0
         }
 
         if (!oldDirection.equals(player.direction) || oldVelocity == 0 && player.velocity > 0) {
