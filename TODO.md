@@ -6,10 +6,9 @@
 * [x] introduce scene abstraction for easier rendering
 * [x] try implementing basics of boomerman as a test
 * [x] add text rendering
+* [x] add sounds
 * [ ] collision layers for hits and collisions (collisions, mostly), when finally needed
 
 For later:
 
-* [ ] add sounds
-* [ ] convenience for menus (implemented as a separate scene, scene switching will be needed)
 * [ ] leaderboard?
