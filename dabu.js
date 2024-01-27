@@ -340,8 +340,10 @@
   let imagePromises = []
   let spritePromises = []
   let fontPromises = []
+  let soundPromises = []
   let definedSprites = []
   let fonts = {}
+  let sounds = {}
   let keyHandlers = new Map()
   let clickHandlers = new Map()
   let bgCanvas
@@ -405,6 +407,8 @@
       loadedImages.forEach(([name, image]) => {
         ctx.images[name] = image
       })
+    }).then(() => {
+      return Promise.all(soundPromises)
     }).then(() => {
       return Promise.all(spritePromises.map(p => p()))
     }).then(() => {
@@ -590,6 +594,16 @@
     }))
   }
 
+  function loadSound(name, source) {
+    soundPromises.push(new Promise(resolve => {
+      let sound = new Audio(source)
+      sound.addEventListener('loadeddata', () => {
+        sounds[name] = sound
+        resolve()
+      })
+    }))
+  }
+
   const FONTS = {
     axones: {
       file: 'assets/axones.png',
@@ -664,6 +678,10 @@
     definedSprites.push(() => {
       ctx.sprites[name] = spriteNames.map(n => ctx.sprites[n])
     })
+  }
+
+  function playSound(name) {
+    sounds[name].play()
   }
 
   function drawText(x, y, fontName, text, opts) {
@@ -961,10 +979,12 @@
     loadImage,
     loadSprite,
     loadFont,
+    loadSound,
     defineSprite,
     init,
     load,
     clearScreen,
+    playSound,
     drawText,
     drawScene,
     runPhysics,

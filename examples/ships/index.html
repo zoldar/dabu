@@ -59,7 +59,11 @@
     let drawCollisionShapes = false
     let drawHitShapes = false
     let drawTraces = false
+    let introPlayed = false
 
+    Dabu.loadFont('axones', '../../')
+    Dabu.loadSound('blip1', '../../assets/nokia_sound_pack/blip1.ogg')
+    Dabu.loadSound('intro', '../../assets/nokia_sound_pack/bad_melody.ogg')
     Dabu.loadImage('sprite1', 'sprite1.png')
 
     function loadSprite(name, tileX, tileY, opts) {
@@ -67,7 +71,6 @@
       Dabu.loadSprite(name, 'sprite1', Point.at(tileX, tileY).multiply(TILE_SIZE), TILE_SIZE, TILE_SIZE, opts)
     }
 
-    Dabu.loadFont('axones', '../../')
     loadSprite('ship_n', 0, 0)
     loadSprite('ship_s', 1, 0)
     loadSprite('ship_w', 2, 0)
@@ -440,7 +443,7 @@
     }
 
     function renderMenuScene(scene) {
-      if (ctx.keys[' ']) {
+     if (ctx.keys[' ']) {
         loadGameScene(scene)
         ctx.keys[' '] = false
       }
@@ -462,6 +465,11 @@
     }
 
     function renderGameScene(scene, secondsPassed) {
+      if (!introPlayed) {
+        Dabu.playSound('intro')
+        introPlayed = true
+      }
+
       if (ctx.keys.Escape) {
         loadMenuScene(scene)
         ctx.keys.Escape = false
@@ -502,10 +510,12 @@
 
       if (ctx.keys.z) {
         fireCannon(scene, 'left')
+        Dabu.playSound('blip1')
         ctx.keys.z = false
       }
       else if (ctx.keys.x) {
         fireCannon(scene, 'right')
+        Dabu.playSound('blip1')
         ctx.keys.x = false
       }
 
