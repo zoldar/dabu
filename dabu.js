@@ -345,8 +345,8 @@
     }
 
     static spriteFunc(fontName, text, opts) {
-      return ({ x, y }) => {
-        drawText(x, y, fontName, text, opts)
+      return (position) => {
+        drawText(position, fontName, text, opts)
       }
     }
   }
@@ -775,7 +775,7 @@
     sounds[name].play()
   }
 
-  function drawText(x, y, fontName, text, opts) {
+  function drawText({x, y}, fontName, text, opts) {
     opts = opts || {}
     let font = fonts[fontName]
 
@@ -1004,18 +1004,21 @@
       if (entity.collisionShape && opts && opts.drawCollisionShapes) {
         let { position, width, height } = entity.collisionShape
         let shapePosition = position.subtract(origin).round()
-        drawPerfectGameRect(shapePosition.x, shapePosition.y, width, height, 0, 200, 0)
+        drawRect(shapePosition, width, height, '#00e000')
       }
 
       if (entity.hitShape && opts && opts.drawHitShapes) {
         let { position, width, height } = entity.hitShape
         let shapePosition = position.subtract(origin).round()
-        drawPerfectGameRect(shapePosition.x, shapePosition.y, width, height, 200, 0, 0)
+        drawRect(shapePosition, width, height, '#e00000')
       }
     }
   }
 
-  function drawPerfectGameRect(sx, sy, width, height, r, g, b) {
+  function drawRect({x: sx, y: sy}, width, height, color, opts) {
+    color = hexToRgb(color)
+    let fill = opts && opts.fill
+    fill = hexToRgb(fill)
     let left = sx
     let right = sx + width - 1
     let top = sy
@@ -1023,7 +1026,9 @@
     for (let x = left; x <= right; x++) {
       for (let y = top; y <= bottom; y++) {
         if (y == top || y == bottom || x == left || x == right) {
-          drawGamePixel(x, y, r, g, b)
+          drawGamePixel(x, y, color.r, color.g, color.b)
+        } else if (fill) {
+          drawGamePixel(x, y, fill.r, fill.g, fill.b)
         }
       }
     }
@@ -1043,6 +1048,16 @@
     bgPixelData[2] = b
     bgPixelData[3] = 255
     ctx.bgContext.putImageData(bgPixel, x, y)
+  }
+
+  // taken from https://stackoverflow.com/a/5624139
+  function hexToRgb(hex) {
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
   }
 
   function sendSignal(name, arg) {
@@ -1079,6 +1094,7 @@
     clearScreen,
     playSound,
     drawText,
+    drawRect,
     drawScene,
     runPhysics,
     getCollisions,

@@ -120,9 +120,8 @@
       }
 
       static spriteFunc(width, height) {
-        return ({ x, y }) => {
-          ctx.gameContext.fillStyle = COLOR
-          ctx.gameContext.fillRect(x, y, width, height)
+        return (position) => {
+          Dabu.drawRect(position, width, height, COLOR, { fill: COLOR })
         }
       }
     }
@@ -221,9 +220,8 @@
           let centerPosition = position.add(Point.at(TILE_SIZE / 2, TILE_SIZE / 2))
           let positionLeft = centerPosition.add(Point.at(direction.y, -1 * direction.x).multiply(SHOT_DISTANCE + TILE_SIZE / 2))
           let positionRight = centerPosition.add(Point.at(-1 * direction.y, direction.x).multiply(SHOT_DISTANCE + TILE_SIZE / 2))
-          ctx.gameContext.fillStyle = COLOR
-          ctx.gameContext.fillRect(positionLeft.x, positionLeft.y, 4, 4)
-          ctx.gameContext.fillRect(positionRight.x, positionRight.y, 4, 4)
+          Dabu.drawRect(positionLeft, 4, 4, COLOR, { fill: COLOR })
+          Dabu.drawRect(positionRight, 4, 4, COLOR, { fill: COLOR })
         }
       }
     }
@@ -369,25 +367,15 @@
 
       static spriteFunc(text, width, height) {
         return ({ x, y }) => {
-          ctx.gameContext.fillStyle = BG_COLOR
-          ctx.gameContext.strokeStyle = COLOR
-          ctx.gameContext.lineWidth = 1
-
-          ctx.gameContext.fillRect(
-            ((ctx.width - width) / 2) + 2,
-            (ctx.height - height) / 2 - 2,
-            width,
-            height
+          Dabu.drawRect(
+            Point.at(
+              ((ctx.width - width) / 2) + 2,
+              (ctx.height - height) / 2 - 2
+            ),
+            width, height, COLOR, { fill: BG_COLOR }
           )
 
-          ctx.gameContext.strokeRect(
-            ((ctx.width - width) / 2) + 2,
-            (ctx.height - height) / 2 - 2,
-            width,
-            height
-          )
-
-          Dabu.drawText(3, -3, 'axones', text, { align: 'hcenter vcenter' })
+          Dabu.drawText(Point.at(3, -3), 'axones', text, { align: 'hcenter vcenter' })
         }
       }
     }
@@ -405,13 +393,9 @@
 
       static spriteFunc(count) {
         let text = `Enemies: ${count}`
-        return ({ x, y }) => {
-          ctx.gameContext.fillStyle = BG_COLOR
-          ctx.gameContext.strokeStyle = COLOR
-          ctx.gameContext.lineWidth = 1
-          ctx.gameContext.fillRect(x, y, 53, 12)
-          ctx.gameContext.strokeRect(x, y, 53, 12)
-          Dabu.drawText(x + 3, y - 3, 'axones', text)
+        return (position) => {
+          Dabu.drawRect(position, 53, 12, COLOR, { fill: BG_COLOR })
+          Dabu.drawText(position.add(Point.at(3, -3)), 'axones', text)
         }
       }
     }
