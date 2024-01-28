@@ -743,7 +743,7 @@
 
   function loadSprite(name, imageSource, { x, y }, width, height, opts) {
     spritePromises.push(() => new Promise(resolve => {
-      let { xGap = 0, count = 1 } = opts || {}
+      let { xGap = 0, count = 1, reversed = false } = opts || {}
 
       if (count > 1) {
         for (let idx = 0; idx < count; idx++) {
@@ -753,6 +753,9 @@
             } else {
               ctx.sprites[name] = [bitmap]
             }
+
+            if (reversed) ctx.sprites[name].reverse()
+
             resolve()
           })
         }

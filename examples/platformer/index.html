@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Platformer</title>
+  <link href="../../dabu.css" rel="stylesheet" />
+  <script src="../../dabu.js"></script>
+</head>
+
+<body>
+  <div id="stage"></div>
+  <script>
+    "use strict"
+
+    // library "imports"
+    const {
+      Point,
+      Sprite,
+      Scene,
+      BoundingBox,
+      DynamicEntity,
+      StaticEntity,
+      FixedEntity,
+      Text,
+      ctx
+    } = Dabu;
+
+    const MAX_FPS = 60
+    const BG_COLOR = '#c7f0d8'
+    const WIDTH = 384
+    const HEIGHT = 240
+    const CAMERA_HMARGIN = 38
+    const CAMERA_VMARGIN = 38
+    const TILE_SIZE = 16
+    const PLAYER_TILE_SIZE = 32
+    const MAX_VELOCITY = 190
+
+    let drawCollisionShapes = false
+    let drawHitShapes = false
+    let drawTraces = false
+    let backgroundSet = false
+    let state = 'playing'
+
+    Dabu.loadImage('background', 'back.png')
+    Dabu.loadImage('tileset', 'tileset.png')
+    Dabu.loadImage('player', 'player.png')
+
+    function loadPlayerSprite(name, tileX, tileY, opts) {
+      opts = opts || {}
+      Dabu.loadSprite(name, 'player', Point.at(tileX, tileY).multiply(PLAYER_TILE_SIZE), PLAYER_TILE_SIZE, PLAYER_TILE_SIZE, opts)
+    }
+
+    loadPlayerSprite('player_stand_right', 0, 0, { count: 4 })
+    loadPlayerSprite('player_stand_left', 4, 0, { count: 4, reversed: true })
+    loadPlayerSprite('player_walk_right', 0, 1, { count: 6 })
+    loadPlayerSprite('player_walk_left', 6, 1, { count: 6, reversed: true })
+    loadPlayerSprite('player_crouch_right', 0, 3, { count: 3 })
+    loadPlayerSprite('player_crouch_left', 3, 3, { count: 3, reversed: true })
+    loadPlayerSprite('player_jump_right', 0, 5, { count: 2 })
+    loadPlayerSprite('player_jump_left', 2, 5, { count: 2, reversed: true })
+
+    class Player extends DynamicEntity {
+      zindex = 2
+      kinetic = false
+
+      width = PLAYER_TILE_SIZE
+      height = PLAYER_TILE_SIZE
+
+      crouching = false
+
+      constructor(position) {
+        super(position)
+        this.hash = 'player'
+        this.direction = Point.RIGHT
+      }
+
+      updateAfter() {
+        super.updateAfter()
+        let standWalk = this.velocity > 0 ? 'walk' : 'stand'
+        let direction = this.direction.equals(Point.RIGHT) ? 'right' : 'left'
+
+        let name;
+
+        if (this.crouching) name = 'player_crouch_' + direction
+        else name = 'player_' + standWalk + '_' + direction
+
+        if (!this.sprite) {
+          this.sprite = new Sprite(name, 10)
+        } else {
+          this.sprite.name = name
+        }
+      }
+    }
+
+    function loadMenuScene(scene) {
+      scene.reset('menu')
+      backgroundSet = false
+    }
+
+    function renderMenuScene(scene) {
+      if (!backgroundSet) {
+        backgroundSet = true
+        ctx.bgContext.drawImage(ctx.images.background, 0, 0)
+      }
+
+      if (ctx.keys[' ']) {
+        loadGameScene(scene)
+        ctx.keys[' '] = false
+      }
+    }
+
+    function loadGameScene(scene) {
+      scene.reset('game')
+
+      scene.add(new Player(Point.at(ctx.width / 2, ctx.height / 2)))
+
+      backgroundSet = false
+      state = 'playing'
+    }
+
+    function renderGameScene(scene, secondsPassed) {
+      if (!backgroundSet) {
+        backgroundSet = true
+        ctx.bgContext.drawImage(ctx.images.background, 0, 0)
+      }
+
+      if (state != 'playing') {
+        ctx.keys = {}
+      }
+
+      if (ctx.keys.Escape) {
+        loadMenuScene(scene)
+        ctx.keys.Escape = false
+        return
+      }
+
+      let { player } = scene.entities
+
+      let direction = Point.at(0, 0)
+      if (ctx.keys.ArrowLeft) direction = direction.add(Point.LEFT)
+      if (ctx.keys.ArrowRight) direction = direction.add(Point.RIGHT)
+      if (!ctx.keys.ArrowDown) player.crouching = false
+
+      if (direction.x != 0) {
+        player.direction = direction
+        player.velocity = MAX_VELOCITY
+      } else {
+        if (ctx.keys.ArrowDown) player.crouching = true
+        player.velocity = 0
+      }
+
+      player.position = player.position.add(player.direction.multiply(player.velocity * secondsPassed))
+
+      if (ctx.keys.c) {
+        drawCollisionShapes = !drawCollisionShapes
+        ctx.keys.c = false
+      }
+
+      if (ctx.keys.h) {
+        drawHitShapes = !drawHitShapes
+        ctx.keys.h = false
+      }
+
+      if (ctx.keys.t) {
+        drawTraces = !drawTraces
+        ctx.keys.t = false
+      }
+    }
+
+    Dabu.init('stage', WIDTH, HEIGHT)
+
+    Dabu.load(
+      () => {
+        let scene = new Scene()
+
+        loadMenuScene(scene)
+
+        return scene
+      },
+      (scene, secondsPassed) => {
+        if (scene.name == 'game') {
+          renderGameScene(scene, secondsPassed)
+        } else {
+          renderMenuScene(scene, secondsPassed)
+        }
+
+        Dabu.runPhysics(scene, secondsPassed)
+        Dabu.drawScene(scene, {
+          drawCollisionShapes: drawCollisionShapes,
+          drawHitShapes: drawHitShapes,
+          drawTraces: drawTraces,
+          pixelPerfectMovement: false,
+          smoothDiagonalMovement: false
+        })
+      },
+      { maxFPS: MAX_FPS }
+    )
+  </script>
+</body>
+
+</html>
