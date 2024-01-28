@@ -51,20 +51,23 @@
     ]
 
     // generated map settings
-    const MAP_WIDTH_TILES = 32
-    const MAP_HEIGHT_TILES = 16
-    const LANDMASS_PERCENT = 20
-    const ENEMIES_COUNT = 20
+    const MAP_WIDTH_TILES = 16
+    const MAP_HEIGHT_TILES = 8
+    const LANDMASS_PERCENT = 10
+    const ENEMIES_COUNT = 2
 
     let drawCollisionShapes = false
     let drawHitShapes = false
     let drawTraces = false
     let introPlayed = false
     let firingSide = 'left'
+    let state = 'playing'
 
     Dabu.loadFont('axones', '../../')
     Dabu.loadSound('blip1', '../../assets/nokia_sound_pack/blip1.mp3')
     Dabu.loadSound('intro', '../../assets/nokia_sound_pack/bad_melody.mp3')
+    Dabu.loadSound('won', '../../assets/nokia_sound_pack/jingle1.mp3')
+    Dabu.loadSound('lost', '../../assets/nokia_sound_pack/negative1.mp3')
     Dabu.loadImage('sprite1', 'sprite1.png')
 
     function loadSprite(name, tileX, tileY, opts) {
@@ -160,6 +163,7 @@
     class Player extends DynamicEntity {
       zindex = 1
       kinetic = false
+      visible = true
       crosshairs
 
       width = TILE_SIZE
@@ -167,7 +171,9 @@
 
       constructor(position, crosshairs) {
         super(position)
+        this.hash = 'player'
         this.collisionShape = new BoundingBox(position, Point.at(3, 3), TILE_SIZE - 6, TILE_SIZE - 6)
+        this.hitShape = new BoundingBox(position, Point.at(3, 3), TILE_SIZE - 6, TILE_SIZE - 6)
         this.direction = Point.RIGHT
         this.crosshairs = crosshairs
         if (this.crosshairs) {
@@ -186,7 +192,11 @@
 
       updateAfter() {
         super.updateAfter()
-        shipSpriteUpdate(this)
+        if (this.visible) {
+          shipSpriteUpdate(this)
+        } else {
+          this.sprite = null
+        }
       }
     }
 
@@ -201,6 +211,7 @@
 
       constructor(position) {
         super(position)
+        this.hash = 'crosshairs'
         this.sprite = Crosshairs.spriteFunc()
       }
 
@@ -222,7 +233,7 @@
       width = TILE_SIZE
       height = TILE_SIZE
 
-      constructor(position, direction) {
+      constructor(position, direction, scene) {
         super(position)
         this.collisionShape = new BoundingBox(position, Point.at(3, 3), TILE_SIZE - 6, TILE_SIZE - 6)
         this.hitShape = new BoundingBox(position, Point.at(3, 3), TILE_SIZE - 6, TILE_SIZE - 6)
@@ -230,9 +241,21 @@
         this.velocity = 10
 
         let that = this
-        setInterval(() => {
+
+        let steeringFunc = () => {
           that.direction = Dabu.sample(DIRECTIONS)
-        }, 5000)
+          scene.setTimer(this, 'steering', steeringFunc, 1000 + Math.floor(Math.random() * 3000))
+        }
+
+        steeringFunc()
+
+        let firingFunc = () => {
+          fireCannon(scene, this, Dabu.sample(['left', 'right']))
+          Dabu.playSound('blip1')
+          scene.setTimer(this, 'firing', firingFunc, 1500 + Math.floor(Math.random() * 2000))
+        }
+
+        firingFunc()
       }
 
       updateAfter() {
@@ -350,19 +373,18 @@
       }
     }
 
-    function fireCannon(scene, board) {
-      let { player } = scene.entities
+    function fireCannon(scene, ship, board) {
       let direction
 
       // determine +/- 90 degrees direction, depending on board
       if (board == 'left') {
-        direction = Point.at(player.direction.y, -1 * player.direction.x)
+        direction = Point.at(ship.direction.y, -1 * ship.direction.x)
       } else {
-        direction = Point.at(-1 * player.direction.y, player.direction.x)
+        direction = Point.at(-1 * ship.direction.y, ship.direction.x)
       }
 
-      scene.add(new Blast(player.position, direction))
-      let ballPosition = player.position.add(direction.multiply(TILE_SIZE / 2))
+      scene.add(new Blast(ship.position, direction))
+      let ballPosition = ship.position.add(direction.multiply(TILE_SIZE / 2))
       scene.add(new CannonBall(ballPosition, direction), 'cannonballs')
     }
 
@@ -419,14 +441,15 @@
 
         scene.add(new EnemyShip(
           point.multiply(TILE_SIZE),
-          Dabu.sample(DIRECTIONS)),
+          Dabu.sample(DIRECTIONS),
+          scene),
           ['enemies', 'hit_targets']
         )
       }
 
       let spawnPoint = Dabu.sample(mapSlots).multiply(TILE_SIZE)
-      scene.entities.crosshairs = new Crosshairs(spawnPoint)
-      scene.entities.player = new Player(spawnPoint, scene.entities.crosshairs)
+      scene.add(new Crosshairs(spawnPoint))
+      scene.add(new Player(spawnPoint, scene.entities.crosshairs), ['hit_targets'])
     }
 
     function loadMenuScene(scene) {
@@ -444,7 +467,7 @@
     }
 
     function renderMenuScene(scene) {
-     if (ctx.keys[' ']) {
+      if (ctx.keys[' ']) {
         loadGameScene(scene)
         ctx.keys[' '] = false
       }
@@ -463,9 +486,33 @@
       scene.cameraSubject = 'player'
       scene.cameraMarginH = CAMERA_HMARGIN
       scene.cameraMarginV = CAMERA_VMARGIN
+
+      state = 'playing'
     }
 
     function renderGameScene(scene, secondsPassed) {
+      if (state == 'won') {
+        scene.add(new Text(Point.at(0, 0), 'axones', 'YOU WON!', { align: 'hcenter vcenter' }))
+        Dabu.playSound('won')
+        state = 'pending'
+        setTimeout(() => {
+          introPlayed = false
+          loadGameScene(scene)
+        }, 2000)
+      } else if (state == 'lost') {
+        scene.add(new Text(Point.at(0, 0), 'axones', 'YOU LOST', { align: 'hcenter vcenter' }))
+        Dabu.playSound('lost')
+        state = 'pending'
+        setTimeout(() => {
+          introPlayed = false
+          loadGameScene(scene)
+        }, 2000)
+      }
+
+      if (state != 'playing') {
+        ctx.keys = {}
+      }
+
       if (!introPlayed) {
         Dabu.playSound('intro')
         introPlayed = true
@@ -510,16 +557,16 @@
       }
 
       if (ctx.keys.z) {
-        fireCannon(scene, 'left')
+        fireCannon(scene, player, 'left')
         Dabu.playSound('blip1')
         ctx.keys.z = false
       }
       else if (ctx.keys.x) {
-        fireCannon(scene, 'right')
+        fireCannon(scene, player, 'right')
         Dabu.playSound('blip1')
         ctx.keys.x = false
       } else if (ctx.keys[' ']) {
-        fireCannon(scene, firingSide)
+        fireCannon(scene, player, firingSide)
         Dabu.playSound('blip1')
         firingSide = firingSide == 'left' ? 'right' : 'left'
         ctx.keys[' '] = false
@@ -554,8 +601,11 @@
           let hitTargets = Dabu.getCollisions(ball, scene.getGroup('hit_targets'), 'hit')
           if (hitTargets.length > 0) {
             hitTargets.forEach(target => {
-              if (target instanceof EnemyShip) {
+              if (target instanceof EnemyShip && state == 'playing') {
                 scene.remove(target)
+              } else if (target instanceof Player) {
+                target.visible = false
+                state = 'lost'
               }
             })
             scene.add(new Hit(ball.position))
@@ -573,7 +623,13 @@
         delete ctx.signals.remove
       }
 
-      scene.entities.enemyCount.update(scene.getGroup('enemies').length)
+      let enemiesLeft = scene.getGroup('enemies').length
+
+      scene.entities.enemyCount.update(enemiesLeft)
+
+      if (state == 'playing' && enemiesLeft == 0) {
+        state = 'won'
+      }
     }
 
     Dabu.init('stage', WIDTH, HEIGHT)

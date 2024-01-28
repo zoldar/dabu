@@ -94,6 +94,7 @@
     cameraOrigin
     groups
     entities
+    timers
 
     constructor() {
       this.reset()
@@ -110,6 +111,10 @@
       this.cameraOrigin = Point.at(0, 0)
       this.groups = {}
       this.entities = {}
+      Object.values(this.timers || {}).forEach(entityTimers => {
+        Object.values(entityTimers).forEach(t => window.clearTimeout(t))
+      })
+      this.timers = {}
     }
 
     has(e) {
@@ -133,6 +138,7 @@
     }
 
     remove(e) {
+      Object.values(this.timers[e.hash] || {}).forEach(t => window.clearTimeout(t))
       Object.values(this.groups).forEach(g => g.delete(e.hash))
       delete this.entities[e.hash]
     }
@@ -143,6 +149,16 @@
       } else {
         return []
       }
+    }
+
+    setTimer(entity, name, func, time) {
+      let timer = window.setTimeout(func, time)
+
+      if (!this.timers[entity.hash]) {
+        this.timers[entity.hash] = {}
+      }
+
+      this.timers[entity.hash][name] = timer
     }
   }
 
@@ -945,6 +961,8 @@
       entity.lastDrawPosition = drawPosition
       entity.updateAfter()
     }
+
+    if (!entity.sprite) return
 
     let sprite = entity.sprite
     let finalPosition = entity instanceof FixedEntity ?
