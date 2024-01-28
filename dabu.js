@@ -472,7 +472,6 @@
   }
 
   function setupControls() {
-    let touchDelta = 10;
     let touchStartX = -1;
     let touchStartY = -1;
     let touchStartTime = -1;
@@ -564,23 +563,22 @@
         let dirX = touchX - touchStartX;
         let dirY = touchY - touchStartY;
 
-        if (Math.abs(dirY) > touchDelta) {
-          if (dirY > 0) setArrowKey('ArrowDown');
-          else setArrowKey('ArrowUp');
+        setArrowKey(null)
+
+        if (dirY < 0 && Math.abs(dirX) <= 2 * Math.abs(dirY)) {
+          ctx.keys.ArrowUp = true
         }
 
-        let dirRatio = Math.abs(dirX) / Math.abs(dirY)
-        if (Math.abs(dirX) > touchDelta && dirRatio > 0.8 && dirRatio < 1.2) {
-          if (dirX > 0) {
-            ctx.keys['ArrowRight'] = true
-            ctx.keys['ArrowLeft'] = false
-          } else {
-            ctx.keys['ArrowRight'] = false
-            ctx.keys['ArrowLeft'] = true
-          }
-        } else if (Math.abs(dirX) > touchDelta) {
-          if (dirX > 0) setArrowKey('ArrowRight');
-          else setArrowKey('ArrowLeft');
+        if (dirY > 0 && Math.abs(dirX) <= 2 * Math.abs(dirY)) {
+          ctx.keys.ArrowDown = true
+        }
+
+        if (dirX < 0 && Math.abs(dirY) <= 2 * Math.abs(dirX)) {
+          ctx.keys.ArrowLeft = true
+        }
+
+        if (dirX > 0 && Math.abs(dirY) <= 2 * Math.abs(dirX)) {
+          ctx.keys.ArrowRight = true
         }
 
         e.preventDefault();
