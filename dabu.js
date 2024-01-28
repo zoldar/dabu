@@ -775,7 +775,7 @@
     sounds[name].play()
   }
 
-  function drawText({x, y}, fontName, text, opts) {
+  function drawText({ x, y }, fontName, text, opts) {
     opts = opts || {}
     let font = fonts[fontName]
 
@@ -1015,7 +1015,7 @@
     }
   }
 
-  function drawRect({x: sx, y: sy}, width, height, color, opts) {
+  function drawRect({ x: sx, y: sy }, width, height, color, opts) {
     color = hexToRgb(color)
     let fill = opts && opts.fill
     fill = hexToRgb(fill)
