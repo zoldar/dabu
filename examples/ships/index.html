@@ -485,11 +485,15 @@
 
       scene.reset('menu')
 
-      scene.add(new Text(Point.at(0, 0), 'axones', 'SHIPS GAME DEMO', { align: 'hcenter' }))
-      scene.add(new Text(Point.at(20, 15), 'axones', '* Arrow keys for steering'))
-      scene.add(new Text(Point.at(20, 30), 'axones', '* Z and X for shooting'))
-      scene.add(new Text(Point.at(20, 45), 'axones', '* C and H for debug info'))
-      scene.add(new Text(Point.at(20, 60), 'axones', '* ESC to come back here'))
+      scene.add(new Text(Point.at(0, 0), 'axones', 'LITTLE SHIPS', { align: 'hcenter' }))
+      scene.add(new Island(Point.at(((ctx.width - TILE_SIZE) / 2) - 40, 0)))
+      scene.add(new Island(Point.at(((ctx.width - TILE_SIZE) / 2) + 40, 0)))
+      let player = new Player(Point.at((ctx.width - TILE_SIZE) / 2, 18))
+      player.direction = Point.DOWN.add(Point.RIGHT).normalize()
+      scene.add(player)
+      scene.add(new Text(Point.at(15, 35), 'axones', '* Arrow keys or touch to move'))
+      scene.add(new Text(Point.at(15, 45), 'axones', '* Z and X or tap to shoot'))
+      scene.add(new Text(Point.at(15, 55), 'axones', '* ESC to come back here'))
       scene.add(new Text(Point.at(0, 75), 'axones', 'Press "Space" to play', { align: 'hcenter' }))
     }
 
@@ -626,9 +630,9 @@
           scene.remove(ball)
 
           let hitTargets = Dabu.getCollisions(ball, scene.getGroup('hit_targets'), 'hit')
-          if (hitTargets.length > 0) {
+          if (hitTargets.length > 0 && state == 'playing') {
             hitTargets.forEach(target => {
-              if (target instanceof EnemyShip && state == 'playing') {
+              if (target instanceof EnemyShip) {
                 scene.remove(target)
               } else if (target instanceof Player) {
                 target.visible = false
