@@ -109,12 +109,12 @@
       this.cameraMarginV = 0
       this.cameraLastOrigin = Point.at(0, 0)
       this.cameraOrigin = Point.at(0, 0)
-      this.groups = {}
-      this.entities = {}
       Object.values(this.timers || {}).forEach(entityTimers => {
         Object.values(entityTimers).forEach(t => window.clearTimeout(t))
       })
       this.timers = {}
+      this.entities = {}
+      this.groups = {}
     }
 
     has(e) {

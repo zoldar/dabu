@@ -22,6 +22,7 @@
       BoundingBox,
       DynamicEntity,
       StaticEntity,
+      FixedEntity,
       Text,
       ctx
     } = Dabu;
@@ -359,17 +360,59 @@
       }
     }
 
-    class EnemyCount extends Text {
+    class CenterBanner extends FixedEntity {
+      zindex = 10
+
+      constructor(text, width, height) {
+        super(Point.at(0, 0), CenterBanner.spriteFunc(text, width, height))
+      }
+
+      static spriteFunc(text, width, height) {
+        return ({ x, y }) => {
+          ctx.gameContext.fillStyle = BG_COLOR
+          ctx.gameContext.strokeStyle = COLOR
+          ctx.gameContext.lineWidth = 1
+
+          ctx.gameContext.fillRect(
+            ((ctx.width - width) / 2) + 2,
+            (ctx.height - height) / 2 - 2,
+            width,
+            height
+          )
+
+          ctx.gameContext.strokeRect(
+            ((ctx.width - width) / 2) + 2,
+            (ctx.height - height) / 2 - 2,
+            width,
+            height
+          )
+
+          Dabu.drawText(3, -3, 'axones', text, { align: 'hcenter vcenter' })
+        }
+      }
+    }
+
+    class EnemyCount extends FixedEntity {
+      zindex = 10
+
       constructor(position, count) {
-        super(position, 'axones', EnemyCount.text(count))
+        super(position, EnemyCount.spriteFunc(count))
       }
 
       update(count) {
-        super.update(EnemyCount.text(count))
+        this.sprite = EnemyCount.spriteFunc(count)
       }
 
-      static text(count) {
-        return `Enemies: ${count}`
+      static spriteFunc(count) {
+        let text = `Enemies: ${count}`
+        return ({ x, y }) => {
+          ctx.gameContext.fillStyle = BG_COLOR
+          ctx.gameContext.strokeStyle = COLOR
+          ctx.gameContext.lineWidth = 1
+          ctx.gameContext.fillRect(x, y, 53, 12)
+          ctx.gameContext.strokeRect(x, y, 53, 12)
+          Dabu.drawText(x + 3, y - 3, 'axones', text)
+        }
       }
     }
 
@@ -492,7 +535,7 @@
 
     function renderGameScene(scene, secondsPassed) {
       if (state == 'won') {
-        scene.add(new Text(Point.at(0, 0), 'axones', 'YOU WON!', { align: 'hcenter vcenter' }))
+        scene.add(new CenterBanner('YOU WON!', 45, 12))
         Dabu.playSound('won')
         state = 'pending'
         setTimeout(() => {
@@ -500,7 +543,7 @@
           loadGameScene(scene)
         }, 2000)
       } else if (state == 'lost') {
-        scene.add(new Text(Point.at(0, 0), 'axones', 'YOU LOST', { align: 'hcenter vcenter' }))
+        scene.add(new CenterBanner('YOU LOST', 45, 12))
         Dabu.playSound('lost')
         state = 'pending'
         setTimeout(() => {
