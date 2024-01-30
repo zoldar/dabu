@@ -57,9 +57,16 @@
       if (this.x == 0 || this.y == 0) {
         x = 1
         y = 1
+      } else if (Math.abs(this.x) == 1 && Math.abs(this.y) == 1) {
+        x = 0.7
+        y = 0.7
+      } else {
+        let l = Math.sqrt(this.x * this.x + this.y * this.y)
+        x = Math.abs(this.x) / l
+        y = Math.abs(this.y) / l
       }
 
-      return Point.at(Math.sign(this.x) * x, Math.sign(this.y) * x)
+      return Point.at(Math.sign(this.x) * x, Math.sign(this.y) * y)
     }
 
     distance(p) {
@@ -224,6 +231,7 @@
     lastDrawPosition
     previousPosition
     previousDirection = Point.DOWN
+    penetrationVector = Point.at(0, 0)
     _position
     width
     height
@@ -654,18 +662,33 @@
       }
 
       if (entity instanceof DynamicEntity && entity.collisionShape && entity.velocity > 0) {
-        let collisionOccurred = false
+        let { position: { x: x1, y: y1 }, width: w1, height: h1 } = entity.collisionShape
+        let penetrationVector = Point.at(0, 0)
+
         Object.entries(entities).forEach(([otherKey, otherEntity]) => {
           if (otherEntity.collisionShape &&
             key != otherKey &&
             entity.collisionShape.collides(otherEntity.collisionShape)) {
-            collisionOccurred = true
+            let { position: { x: x2, y: y2 }, width: w2, height: h2 } = otherEntity.collisionShape
+            let pw = 0, xDir = 0, ph = 0, yDir = 0
+
+            if (x1 > x2) [pw, xDir] = [w2 - (x1 - x2), -1]
+            else if (x1 < x2) [pw, xDir] = [w1 - (x2 - x1), 1]
+
+            if (y1 > y2) [ph, yDir] = [h2 - (y1 - y2), -1]
+            else if (y1 < y2) [ph, yDir] = [h1 - (y2 - y1), 1]
+
+            if (ph > 0 || pw > 0) {
+              let pVec = ph >= pw ? Point.at(xDir * pw, 0) : Point.at(0, yDir * ph)
+
+              if (Math.abs(pVec.x) > Math.abs(penetrationVector.x)) penetrationVector.x = pVec.x
+              if (Math.abs(pVec.y) > Math.abs(penetrationVector.y)) penetrationVector.y = pVec.y
+            }
           }
         })
 
-        if (collisionOccurred && entity.previousPosition) {
-          entity.position = entity.previousPosition
-        }
+        entity.penetrationVector = penetrationVector
+        entity.position = entity.position.subtract(penetrationVector)
       }
     })
   }
