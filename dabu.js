@@ -663,6 +663,8 @@
 
       if (entity instanceof DynamicEntity && entity.collisionShape && entity.velocity > 0) {
         let { position: { x: x1, y: y1 }, width: w1, height: h1 } = entity.collisionShape
+        let { previousPosition: { x: px, y: py }, position: { x: cx, y: cy } } = entity
+        let penetrationDirection = Point.at(cx - px, cy - py)
         let penetrationVector = Point.at(0, 0)
 
         Object.entries(entities).forEach(([otherKey, otherEntity]) => {
@@ -670,20 +672,23 @@
             key != otherKey &&
             entity.collisionShape.collides(otherEntity.collisionShape)) {
             let { position: { x: x2, y: y2 }, width: w2, height: h2 } = otherEntity.collisionShape
-            let pw = 0, xDir = 0, ph = 0, yDir = 0
 
-            if (x1 > x2) [pw, xDir] = [w2 - (x1 - x2), -1]
-            else if (x1 < x2) [pw, xDir] = [w1 - (x2 - x1), 1]
+            let pVec = Point.at(0, 0)
 
-            if (y1 > y2) [ph, yDir] = [h2 - (y1 - y2), -1]
-            else if (y1 < y2) [ph, yDir] = [h1 - (y2 - y1), 1]
-
-            if (ph > 0 || pw > 0) {
-              let pVec = ph >= pw ? Point.at(xDir * pw, 0) : Point.at(0, yDir * ph)
-
-              if (Math.abs(pVec.x) > Math.abs(penetrationVector.x)) penetrationVector.x = pVec.x
-              if (Math.abs(pVec.y) > Math.abs(penetrationVector.y)) penetrationVector.y = pVec.y
+            if (penetrationDirection.x >= 0) {
+              pVec.x = x1 + w1 - x2
+            } else {
+              pVec.x = x1 - x2 - w2
             }
+
+            if (penetrationDirection.y >= 0) {
+              pVec.y = y1 + h1 - y2
+            } else {
+              pVec.y = y1 - y2 - h2
+            }
+
+            if (Math.abs(pVec.x) < Math.abs(pVec.y) && Math.abs(pVec.x) > Math.abs(penetrationVector.x)) penetrationVector.x = pVec.x
+            else if (Math.abs(pVec.y) > Math.abs(penetrationVector.y)) penetrationVector.y = pVec.y
           }
         })
 

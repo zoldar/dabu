@@ -131,7 +131,7 @@
 
         let name;
 
-        if (this.verticalVelocity == 0 || this.penetrationVector.y > 0) {
+        if (this.verticalVelocity >= 0 && this.verticalVelocity < 80) {
           if (this.crouching) name = 'player_crouch_' + this.turned
           else name = 'player_' + standWalk + '_' + this.turned
         } else {
