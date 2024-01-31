@@ -147,6 +147,8 @@
       turned = 'left'
       verticalVelocity = 0
       horizontalVelocity = 0
+      relativeVelocity = 0
+      relativeDirection = Point.at(0, 0)
 
       width = PLAYER_TILE_SIZE
       height = PLAYER_TILE_SIZE
@@ -220,7 +222,7 @@
         scene.add(new Ground(startPoint.add(Point.at(idx * TILE_SIZE, 0)), (idx % 3) + 1))
       }
 
-      scene.add(new Opossum(Point.at(40, (ctx.height / 2) + 4)))
+      scene.add(new Opossum(Point.at(40, (ctx.height / 2) + 4)), ['platforms'])
       scene.add(new Player(Point.at(ctx.width / 2, ctx.height / 2)))
 
       scene.cameraSubject = 'player'
@@ -289,7 +291,18 @@
 
       player.velocity = Point.at(player.horizontalVelocity, player.verticalVelocity).distance(Point.at(0, 0))
 
-      player.position = player.position.add(player.direction.multiply(player.velocity * secondsPassed))
+      let platforms = Dabu.getCollisions(player, scene.getGroup('platforms'), 'collision', {marginBottom: 3})
+      if (platforms.length > 0) {
+        player.relativeVelocity = platforms[0].velocity
+        player.relativeDirection = platforms[0].direction
+      } else {
+        player.relativeVelocity = 0
+        player.relativeDirection = Point.at(0, 0)
+      }
+
+      let finalVector = player.relativeDirection.multiply(player.relativeVelocity).add(player.direction.multiply(player.velocity))
+
+      player.position = player.position.add(finalVector.multiply(secondsPassed))
 
       if (ctx.keys.c) {
         drawCollisionShapes = !drawCollisionShapes

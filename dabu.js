@@ -638,12 +638,20 @@
     return [cx, cy]
   }
 
-  function getCollisions(entity, otherEntities, shapeType) {
+  function getCollisions(entity, otherEntities, shapeType, opts) {
     let collisions = []
 
     let entityShape = shapeType == 'hit' ? entity.hitShape : entity.collisionShape
 
     if (entityShape) {
+      if (opts && opts.marginBottom) {
+        entityShape = new BoundingBox(
+          entityShape.position,
+          entityShape.offset,
+          entityShape.width,
+          entityShape.height + opts.marginBottom
+        )
+      }
       otherEntities.forEach(e => {
         let eShape = shapeType == 'hit' ? e.hitShape : e.collisionShape
 
