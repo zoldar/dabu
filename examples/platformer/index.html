@@ -49,6 +49,7 @@
     Dabu.loadImage('background', 'back.png')
     Dabu.loadImage('tileset', 'tileset.png')
     Dabu.loadImage('player', 'player.png')
+    Dabu.loadImage('opossum', 'opossum.png')
 
     function loadPlayerSprite(name, tileX, tileY, opts) {
       opts = opts || {}
@@ -60,6 +61,8 @@
       Dabu.loadSprite(name, 'tileset', Point.at(tileX, tileY).multiply(TILE_SIZE), TILE_SIZE, TILE_SIZE, opts)
     }
 
+    Dabu.loadSprite('opossum_left', 'opossum', Point.at(0, 0), 36, 28, { count: 6 })
+    Dabu.loadSprite('opossum_right', 'opossum', Point.at(0, 28), 36, 28, { count: 6, reversed: true })
     loadPlayerSprite('player_stand_right', 0, 0, { count: 4 })
     loadPlayerSprite('player_stand_left', 4, 0, { count: 4, reversed: true })
     loadPlayerSprite('player_walk_right', 0, 1, { count: 6 })
@@ -103,6 +106,38 @@
           new Sprite(name),
           new BoundingBox(position, Point.at(0, 0), TILE_SIZE, TILE_SIZE)
         )
+      }
+    }
+
+    class Opossum extends DynamicEntity {
+      zindex = 2
+      mass = 2
+
+      width = 36
+      height = 28
+
+      spawnPosition
+
+      constructor(position) {
+        super(position)
+        this.spawnPosition = position
+        this.collisionShape = new BoundingBox(position, Point.at(4, 8), 28, 20)
+        this.direction = Point.RIGHT
+        this.sprite = new Sprite('opossum_right', 10)
+        this.velocity = 100
+      }
+
+      updateAfter() {
+        super.updateAfter()
+
+        let distance = this.position.x - this.spawnPosition.x
+        if ((distance < 0 && this.direction.x < 0) || (distance > 200 && this.direction.x > 0)) {
+          this.direction = this.direction.x > 0 ? Point.LEFT : Point.RIGHT
+        }
+
+        let name = 'opossum_' + this.direction.directionName()
+
+        this.sprite.name = name
       }
     }
 
@@ -184,6 +219,8 @@
       for (let idx = 0; idx <= 10; idx++) {
         scene.add(new Ground(startPoint.add(Point.at(idx * TILE_SIZE, 0)), (idx % 3) + 1))
       }
+
+      scene.add(new Opossum(Point.at(40, (ctx.height / 2) + 4)))
       scene.add(new Player(Point.at(ctx.width / 2, ctx.height / 2)))
 
       scene.cameraSubject = 'player'
@@ -237,7 +274,8 @@
         player.verticalVelocity = 0
       }
 
-      if (player.penetrationVector.y > 0 && player.horizontalVelocity == 0 && ctx.keys.ArrowDown) {
+      if (player.verticalVelocity >= 0 && player.verticalVelocity < 80 &&
+        player.horizontalVelocity == 0 && ctx.keys.ArrowDown) {
         player.crouching = true
       } else {
         player.crouching = false

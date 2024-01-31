@@ -228,6 +228,7 @@
   }
   class DynamicEntity {
     hash
+    mass = 1
     lastDrawPosition
     previousPosition
     previousDirection = Point.DOWN
@@ -661,7 +662,7 @@
         entity.position = entity.position.add(entity.direction.multiply(entity.velocity * secondsPassed))
       }
 
-      if (entity instanceof DynamicEntity && entity.collisionShape && entity.velocity > 0) {
+      if (entity instanceof DynamicEntity && entity.collisionShape) {
         let { position: { x: x1, y: y1 }, width: w1, height: h1 } = entity.collisionShape
         let { previousPosition: { x: px, y: py }, position: { x: cx, y: cy } } = entity
         let penetrationDirection = Point.at(cx - px, cy - py)
@@ -671,24 +672,60 @@
           if (otherEntity.collisionShape &&
             key != otherKey &&
             entity.collisionShape.collides(otherEntity.collisionShape)) {
-            let { position: { x: x2, y: y2 }, width: w2, height: h2 } = otherEntity.collisionShape
-
             let pVec = Point.at(0, 0)
 
-            if (penetrationDirection.x >= 0) {
-              pVec.x = x1 + w1 - x2
+            if (otherEntity instanceof DynamicEntity && entity.mass > otherEntity.mass) {
+              pVec = Point.at(0, 0)
             } else {
-              pVec.x = x1 - x2 - w2
-            }
+              let { position: { x: x2, y: y2 }, width: w2, height: h2 } = otherEntity.collisionShape
+              let otherPenetrationDirection = Point.at(0, 0)
+              let mass = entity.mass
+              let otherMass = otherEntity.mass || entity.mass
 
-            if (penetrationDirection.y >= 0) {
-              pVec.y = y1 + h1 - y2
-            } else {
-              pVec.y = y1 - y2 - h2
-            }
+              if (otherEntity instanceof DynamicEntity) {
+                otherPenetrationDirection = otherEntity.position.subtract(otherEntity.previousPosition)
+              }
 
-            if (Math.abs(pVec.x) < Math.abs(pVec.y) && Math.abs(pVec.x) > Math.abs(penetrationVector.x)) penetrationVector.x = pVec.x
-            else if (Math.abs(pVec.y) > Math.abs(penetrationVector.y)) penetrationVector.y = pVec.y
+              if (otherEntity instanceof DynamicEntity && mass == otherMass && Math.sign(penetrationDirection.x) != Math.sign(otherPenetrationDirection.x)) {
+                penetrationVector.x = penetrationDirection.x
+              } else if (otherEntity instanceof DynamicEntity && mass == otherMass && Math.sign(penetrationDirection.x) == Math.sign(otherPenetrationDirection.x)) {
+                if ((penetrationDirection.x > 0 && x2 - x1 > 0) || (penetrationDirection.x < 0 && x2 - x1 < 0)) {
+                  penetrationVector.x = penetrationDirection.x
+                } else {
+                  penetrationVector.x = 0
+                }
+              } else if (otherPenetrationDirection.x <= 0 && penetrationDirection.x >= 0) {
+                pVec.x = x1 + w1 - x2
+              } else if (otherPenetrationDirection.x > 0 && penetrationDirection.x > 0) {
+                pVec.x = x1 + w1 - x2
+              } else {
+                pVec.x = x1 - x2 - w2
+              }
+
+              if (otherEntity instanceof DynamicEntity && mass == otherMass && Math.sign(penetrationDirection.y) != Math.sign(otherPenetrationDirection.y)) {
+                penetrationVector.y = penetrationDirection.y
+              } else if (otherEntity instanceof DynamicEntity && mass == otherMass && Math.sign(penetrationDirection.y) == Math.sign(otherPenetrationDirection.y)) {
+                if ((penetrationDirection.y > 0 && y2 - y1 > 0) || (penetrationDirection.y < 0 && y2 - y1 < 0)) {
+                  penetrationVector.y = penetrationDirection.y
+                } else {
+                  penetrationVector.y = 0
+                }
+              } else if (otherPenetrationDirection.y <= 0 && penetrationDirection.y >= 0) {
+                pVec.y = y1 + h1 - y2
+              } else if (otherPenetrationDirection.y > 0 && penetrationDirection.y > 0) {
+                pVec.y = y1 + h1 - y2
+              } else {
+                pVec.y = y1 - y2 - h2
+              }
+
+              if (pVec.x != 0 || pVec.y != 0) {
+                if (Math.abs(pVec.x) <= Math.abs(pVec.y) && Math.abs(pVec.x) >= Math.abs(penetrationVector.x)) {
+                  penetrationVector.x = pVec.x
+                } else if (Math.abs(pVec.x) > Math.abs(pVec.y) && Math.abs(pVec.y) >= Math.abs(penetrationVector.y)) {
+                  penetrationVector.y = pVec.y
+                }
+              }
+            }
           }
         })
 
