@@ -31,7 +31,7 @@
     const BG_COLOR = '#c7f0d8'
     const WIDTH = 384
     const HEIGHT = 240
-    const CAMERA_HMARGIN = 80
+    const CAMERA_HMARGIN = 100
     const CAMERA_VMARGIN = 90
     const GRAVITY = 1200
     const JUMP_VELOCITY = 400
@@ -50,6 +50,7 @@
     Dabu.loadImage('tileset', 'tileset.png')
     Dabu.loadImage('player', 'player.png')
     Dabu.loadImage('opossum', 'opossum.png')
+    Dabu.loadImage('middle', 'middle.png')
 
     function loadPlayerSprite(name, tileX, tileY, opts) {
       opts = opts || {}
@@ -78,6 +79,26 @@
     loadEnvSprite('ground2', 3, 1)
     loadEnvSprite('ground3', 5, 1)
     loadEnvSprite('stone_small', 1, 20)
+
+    class MovingBackground extends StaticEntity {
+      zindex = 1
+
+      constructor(scene) {
+        super(Point.at(0, 90), MovingBackground.spriteFunc(ctx.images['middle'], scene))
+      }
+
+      static spriteFunc(image, scene) {
+        return ({x, y}) => {
+          let shiftY = scene.cameraOrigin.y + y - (scene.cameraOrigin.y / 10)
+          let shift = Math.floor((scene.cameraOrigin.x / 10) % image.width) + image.width
+          let currentX = -1 * Math.abs(shift)
+          while (currentX <= ctx.width) {
+            ctx.gameContext.drawImage(image, currentX, shiftY)
+            currentX += image.width
+          }
+        }
+      }
+    }
 
     class Ground extends StaticEntity {
       zindex = 2
@@ -209,6 +230,8 @@
 
     function loadGameScene(scene) {
       scene.reset('game')
+
+      scene.add(new MovingBackground(scene))
 
       let startPoint = Point.at(-32, ctx.height / 2 + PLAYER_TILE_SIZE)
       for (let idx = 0; idx <= 30; idx++) {
