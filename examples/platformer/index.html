@@ -31,13 +31,13 @@
     const BG_COLOR = '#c7f0d8'
     const WIDTH = 384
     const HEIGHT = 240
-    const CAMERA_HMARGIN = 38
-    const CAMERA_VMARGIN = 38
+    const CAMERA_HMARGIN = 80
+    const CAMERA_VMARGIN = 90
     const GRAVITY = 1200
     const JUMP_VELOCITY = 400
     const TILE_SIZE = 16
     const PLAYER_TILE_SIZE = 32
-    const MAX_VELOCITY = 190
+    const MAX_VELOCITY = 150
     const MAX_FALL_VELOCITY = 200
 
     let drawCollisionShapes = false
@@ -226,8 +226,8 @@
       scene.add(new Player(Point.at(ctx.width / 2, ctx.height / 2)))
 
       scene.cameraSubject = 'player'
-      scene.cameraMarginH = 80
-      scene.cameraMarginV = 80
+      scene.cameraMarginH = CAMERA_HMARGIN
+      scene.cameraMarginV = CAMERA_VMARGIN
 
       backgroundSet = false
       state = 'playing'
