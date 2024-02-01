@@ -143,6 +143,7 @@
         super(position)
         this.spawnPosition = position
         this.collisionShape = new BoundingBox(position, Point.at(4, 8), 28, 20)
+        this.hitShape = new BoundingBox(position, Point.at(4, 8), 28, 2)
         this.direction = Point.RIGHT
         this.sprite = new Sprite('opossum_right', 10)
         this.velocity = 100
@@ -179,6 +180,7 @@
       constructor(position) {
         super(position)
         this.collisionShape = new BoundingBox(position, Point.at(5, 11), 22, 21)
+        this.hitShape = new BoundingBox(position, Point.at(9, 11), 14, 21)
         this.hash = 'player'
         this.direction = Point.RIGHT
       }
@@ -314,7 +316,7 @@
 
       player.velocity = Point.at(player.horizontalVelocity, player.verticalVelocity).distance(Point.at(0, 0))
 
-      let platforms = Dabu.getCollisions(player, scene.getGroup('platforms'), 'collision', {marginBottom: 3})
+      let platforms = Dabu.getCollisions(player, scene.getGroup('platforms'), 'hit', {marginBottom: 2})
       if (platforms.length > 0) {
         player.relativeVelocity = platforms[0].velocity
         player.relativeDirection = platforms[0].direction
