@@ -366,6 +366,7 @@
   let spritePromises = []
   let fontPromises = []
   let soundPromises = []
+  let jsonPromises = []
   let definedSprites = []
   let fonts = {}
   let sounds = {}
@@ -392,6 +393,7 @@
     sprites: {},
     keys: {},
     signals: {},
+    jsons: {},
     mouseX: 0,
     mouseY: 0,
     mouseButton: false,
@@ -411,21 +413,23 @@
 
     clearCanvas()
 
-    let state = initFunc()
+    let gameLoopInit = state => {
+      let gameLoop = timestamp => {
+        // Keep requesting new frames
+        requestAnimationFrameId = window.requestAnimationFrame(gameLoop)
 
-    let gameLoop = (timestamp) => {
-      // Keep requesting new frames
-      requestAnimationFrameId = window.requestAnimationFrame(gameLoop)
+        // Skip frame drawing if not enough time has passed
+        if (timestamp < oldTimestamp + (1000 / maxFPS)) return
 
-      // Skip frame drawing if not enough time has passed
-      if (timestamp < oldTimestamp + (1000 / maxFPS)) return
+        // Calculate the number of seconds passed since the last frame
+        // with a maximum of 0.1 second.
+        let secondsPassed = Math.min(0.1, (timestamp - oldTimestamp) / 1000)
+        oldTimestamp = timestamp
 
-      // Calculate the number of seconds passed since the last frame
-      // with a maximum of 0.1 second.
-      let secondsPassed = Math.min(0.1, (timestamp - oldTimestamp) / 1000)
-      oldTimestamp = timestamp
+        renderFunc(state, secondsPassed)
+      }
 
-      renderFunc(state, secondsPassed)
+      return gameLoop
     }
 
     Promise.all(imagePromises).then(loadedImages => {
@@ -435,11 +439,15 @@
     }).then(() => {
       return Promise.all(soundPromises)
     }).then(() => {
+      return Promise.all(jsonPromises)
+    }).then(() => {
       return Promise.all(spritePromises.map(p => p()))
     }).then(() => {
       return Promise.all(fontPromises.map(p => p()))
     }).then(() => {
       definedSprites.forEach(cb => cb())
+
+      let gameLoop = gameLoopInit(initFunc())
 
       requestAnimationFrameId = window.requestAnimationFrame(gameLoop)
     })
@@ -757,6 +765,17 @@
     }))
   }
 
+  function loadJSON(name, source) {
+    jsonPromises.push(new Promise(resolve => {
+      fetch(source)
+        .then(response => response.json())
+        .then(json => {
+          ctx.jsons[name] = json
+          resolve()
+        })
+    }))
+  }
+
   function loadSound(name, source) {
     soundPromises.push(new Promise(resolve => {
       let sound = new Audio(source)
@@ -816,11 +835,23 @@
 
   function loadSprite(name, imageSource, { x, y }, width, height, opts) {
     spritePromises.push(() => new Promise(resolve => {
-      let { xGap = 0, count = 1, reversed = false } = opts || {}
+      let { count = 1, reversed = false } = opts || {}
 
       if (count > 1) {
-        for (let idx = 0; idx < count; idx++) {
-          createImageBitmap(ctx.images[imageSource], x + idx * (width + xGap), y, width, height).then(bitmap => {
+        let image = ctx.images[imageSource]
+
+        let tileWidth = Math.floor((image.width - x) / width)
+        let tileHeight = Math.floor((image.height - y) / height)
+        let max = count === Infinity ? tileWidth * tileHeight : count
+
+        for (let idx = 0; idx < max; idx++) {
+          createImageBitmap(
+            image,
+            x + (idx % tileWidth) * width,
+            y + Math.floor(idx / tileWidth) * height,
+            width,
+            height
+          ).then(bitmap => {
             if (ctx.sprites[name]) {
               ctx.sprites[name].push(bitmap)
             } else {
@@ -1164,6 +1195,7 @@
     loadSprite,
     loadFont,
     loadSound,
+    loadJSON,
     defineSprite,
     init,
     load,

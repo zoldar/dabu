@@ -79,6 +79,9 @@
     loadEnvSprite('ground2', 3, 1)
     loadEnvSprite('ground3', 5, 1)
     loadEnvSprite('stone_small', 1, 20)
+    Dabu.loadSprite('tileset', 'tileset', Point.at(0, 0), TILE_SIZE, TILE_SIZE, { count: Infinity })
+
+    Dabu.loadJSON('level1', './levels/level1.tmj')
 
     class MovingBackground extends StaticEntity {
       zindex = 1
@@ -88,7 +91,7 @@
       }
 
       static spriteFunc(image, scene) {
-        return ({x, y}) => {
+        return ({ x, y }) => {
           let shiftY = scene.cameraOrigin.y + y - (scene.cameraOrigin.y / 10)
           let shift = Math.floor((scene.cameraOrigin.x / 10) % image.width) + image.width
           let currentX = -1 * Math.abs(shift)
@@ -97,6 +100,42 @@
             currentX += image.width
           }
         }
+      }
+    }
+
+    class MapBackground extends StaticEntity {
+      constructor(scene, map, zindex) {
+        super(Point.at(0, 0), MapBackground.spriteFunc(scene, map))
+        this.zindex = zindex
+      }
+
+      static spriteFunc(scene, map) {
+        return () => {
+          map.forEach(m => {
+            let p = m.position.subtract(scene.cameraOrigin)
+            ctx.gameContext.drawImage(m.sprite, p.x, p.y)
+          })
+        }
+      }
+    }
+
+    class StaticCollisionBox extends StaticEntity {
+      constructor(box) {
+        super(
+          Point.at(box.x, box.y),
+          null,
+          new BoundingBox(Point.at(box.x, box.y), Point.at(0, 0), box.width, box.height)
+        )
+      }
+    }
+
+    class StaticPlatformBox extends StaticEntity {
+      constructor(box) {
+        super(
+          Point.at(box.x, box.y),
+          null,
+          new BoundingBox(Point.at(box.x, box.y), Point.at(0, 0), box.width, box.height)
+        )
       }
     }
 
@@ -230,25 +269,60 @@
       }
     }
 
+    function loadMap(scene, json) {
+      let tileset = ctx.sprites.tileset
+
+      let mapLayer = json.layers.find(l => l.name == 'map')
+      drawLayer(scene, tileset, mapLayer, 1)
+
+      let interactiveLayer = json.layers.find(l => l.name == 'interactive')
+      drawLayer(scene, tileset, interactiveLayer, 1)
+
+      let mapFrontLayer = json.layers.find(l => l.name == 'map_front')
+      drawLayer(scene, tileset, mapFrontLayer, 3)
+
+      let collisionLayer = json.layers.find(l => l.name == 'collisions')
+      collisionLayer.objects.forEach(box => {
+        scene.add(new StaticCollisionBox(box))
+      })
+
+      let platformLayer = json.layers.find(l => l.name == 'platforms')
+      platformLayer.objects.forEach(box => {
+        scene.add(new StaticPlatformBox(box), ['static_platforms'])
+      })
+    }
+
+    function drawLayer(scene, tileset, layerData, zindex) {
+      let map = []
+
+      layerData.chunks.forEach(chunk => {
+        let { x: tileX, y: tileY, width, data } = chunk
+
+        data.forEach((tileId, idx) => {
+          if (tileId > 0) {
+            let tile = tileset[tileId - 1]
+            let relativeTileX = idx % width
+            let relativeTileY = Math.floor(idx / width)
+            let x = (tileX + relativeTileX) * TILE_SIZE
+            let y = (tileY + relativeTileY) * TILE_SIZE
+
+            map.push({ position: Point.at(x, y), sprite: tile })
+          }
+        })
+      })
+
+      scene.add(new MapBackground(scene, map, zindex))
+    }
+
     function loadGameScene(scene) {
       scene.reset('game')
 
       scene.add(new MovingBackground(scene))
 
-      let startPoint = Point.at(-32, ctx.height / 2 + PLAYER_TILE_SIZE)
-      for (let idx = 0; idx <= 30; idx++) {
-        scene.add(new Ground(startPoint.add(Point.at(idx * TILE_SIZE, 0)), (idx % 3) + 1))
-      }
+      loadMap(scene, ctx.jsons.level1)
 
-      scene.add(new Obstacle(startPoint.add(Point.at(25 * TILE_SIZE, -1 * TILE_SIZE)), 'stone_small'))
-
-      startPoint = Point.at(16, ctx.height / 2 - 1.3 * PLAYER_TILE_SIZE)
-      for (let idx = 0; idx <= 10; idx++) {
-        scene.add(new Ground(startPoint.add(Point.at(idx * TILE_SIZE, 0)), (idx % 3) + 1))
-      }
-
-      scene.add(new Opossum(Point.at(40, (ctx.height / 2) + 4)), ['platforms'])
-      scene.add(new Player(Point.at(ctx.width / 2, ctx.height / 2)))
+      scene.add(new Opossum(Point.at(120, (ctx.height / 2) + 4)), ['platforms'])
+      scene.add(new Player(Point.at(ctx.width / 2 + 100, ctx.height / 2)))
 
       scene.cameraSubject = 'player'
       scene.cameraMarginH = CAMERA_HMARGIN
@@ -316,7 +390,7 @@
 
       player.velocity = Point.at(player.horizontalVelocity, player.verticalVelocity).distance(Point.at(0, 0))
 
-      let platforms = Dabu.getCollisions(player, scene.getGroup('platforms'), 'hit', {marginBottom: 2})
+      let platforms = Dabu.getCollisions(player, scene.getGroup('platforms'), 'hit', { marginBottom: 2 })
       if (platforms.length > 0) {
         player.relativeVelocity = platforms[0].velocity
         player.relativeDirection = platforms[0].direction
