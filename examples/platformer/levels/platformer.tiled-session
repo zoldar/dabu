@@ -10,10 +10,10 @@
     "fileStates": {
         "level1.tmj": {
             "scale": 3,
-            "selectedLayer": 1,
+            "selectedLayer": 4,
             "viewCenter": {
-                "x": 305.5,
-                "y": 146
+                "x": 321,
+                "y": 156.16666666666666
             }
         },
         "level1.tmx": {
@@ -42,8 +42,8 @@
     ],
     "project": "platformer.tiled-project",
     "recentFiles": [
-        "tileset.tsx",
         "level1.tmj",
+        "tileset.tsx",
         "level1.tmx"
     ],
     "tileset.lastUsedFormat": "tsx",

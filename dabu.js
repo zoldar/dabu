@@ -240,6 +240,7 @@
     _velocity = 0
     kinetic = true
     sprite
+    collides = true
     collisionShape
     hitShape
     zindex = 0
@@ -308,6 +309,7 @@
     width
     height
     sprite
+    collides = true
     collisionShape
     hitShape
     zindex = 0
@@ -678,14 +680,15 @@
         entity.position = entity.position.add(entity.direction.multiply(entity.velocity * secondsPassed))
       }
 
-      if (entity instanceof DynamicEntity && entity.collisionShape) {
+      if (entity instanceof DynamicEntity && entity.collides && entity.collisionShape) {
         let { position: { x: x1, y: y1 }, width: w1, height: h1 } = entity.collisionShape
         let { previousPosition: { x: px, y: py }, position: { x: cx, y: cy } } = entity
         let penetrationDirection = Point.at(cx - px, cy - py)
         let penetrationVector = Point.at(0, 0)
 
         Object.entries(entities).forEach(([otherKey, otherEntity]) => {
-          if (otherEntity.collisionShape &&
+          if (otherEntity.collides &&
+            otherEntity.collisionShape &&
             key != otherKey &&
             entity.collisionShape.collides(otherEntity.collisionShape)) {
             let pVec = Point.at(0, 0)
