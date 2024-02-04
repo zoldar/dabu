@@ -656,7 +656,7 @@
     if (entityShape) {
       if (opts && opts.marginBottom) {
         entityShape = new BoundingBox(
-          entityShape.position,
+          entityShape.position.subtract(entityShape.offset),
           entityShape.offset,
           entityShape.width,
           entityShape.height + opts.marginBottom
@@ -1070,58 +1070,58 @@
       entity.updateAfter()
     }
 
-    if (!entity.sprite) return
+    if (entity.sprite) {
+      let sprite = entity.sprite
+      let finalPosition = entity instanceof FixedEntity ?
+        drawPosition : drawPosition.subtract(origin)
 
-    let sprite = entity.sprite
-    let finalPosition = entity instanceof FixedEntity ?
-      drawPosition : drawPosition.subtract(origin)
-
-    if (sprite instanceof Function) {
-      sprite(finalPosition, entity.direction, entity.velocity)
-    } else {
-      let { x, y } = finalPosition
-      let sprites = ctx.sprites[sprite.name]
-      let spriteFrame
-
-      if (sprites instanceof Array) {
-        let frame
-
-        if (sprite.endCallbackCalled) {
-          frame = sprites.length - 1
-        } else {
-          let msPerFrame = 1000 / sprite.fps
-          frame = Math.floor(((performance.now() - sprite.timestamp) / msPerFrame)) % sprites.length
-        }
-
-        if (sprite.endCallback &&
-          !sprite.endCallbackCalled &&
-          frame == sprites.length - 1) {
-          sprite.endCallbackCalled = true
-          sprite.endCallback()
-        }
-
-        spriteFrame = sprites[frame]
+      if (sprite instanceof Function) {
+        sprite(finalPosition, entity.direction, entity.velocity)
       } else {
-        spriteFrame = sprites
-      }
+        let { x, y } = finalPosition
+        let sprites = ctx.sprites[sprite.name]
+        let spriteFrame
 
-      if (opts && opts.drawTraces && entity instanceof DynamicEntity) {
-        drawBgPixel(x, y, 120, 120, 120)
-      }
+        if (sprites instanceof Array) {
+          let frame
 
-      ctx.gameContext.drawImage(spriteFrame, x, y)
+          if (sprite.endCallbackCalled) {
+            frame = sprites.length - 1
+          } else {
+            let msPerFrame = 1000 / sprite.fps
+            frame = Math.floor(((performance.now() - sprite.timestamp) / msPerFrame)) % sprites.length
+          }
 
-      if (entity.collisionShape && opts && opts.drawCollisionShapes) {
-        let { position, width, height } = entity.collisionShape
-        let shapePosition = position.subtract(origin).round()
-        drawRect(shapePosition, width, height, '#00e000')
-      }
+          if (sprite.endCallback &&
+            !sprite.endCallbackCalled &&
+            frame == sprites.length - 1) {
+            sprite.endCallbackCalled = true
+            sprite.endCallback()
+          }
 
-      if (entity.hitShape && opts && opts.drawHitShapes) {
-        let { position, width, height } = entity.hitShape
-        let shapePosition = position.subtract(origin).round()
-        drawRect(shapePosition, width, height, '#e00000')
+          spriteFrame = sprites[frame]
+        } else {
+          spriteFrame = sprites
+        }
+
+        if (opts && opts.drawTraces && entity instanceof DynamicEntity) {
+          drawBgPixel(x, y, 120, 120, 120)
+        }
+
+        ctx.gameContext.drawImage(spriteFrame, x, y)
       }
+    }
+
+    if (entity.collisionShape && opts && opts.drawCollisionShapes) {
+      let { position, width, height } = entity.collisionShape
+      let shapePosition = position.subtract(origin).round()
+      drawRect(shapePosition, width, height, '#00e000')
+    }
+
+    if (entity.hitShape && opts && opts.drawHitShapes) {
+      let { position, width, height } = entity.hitShape
+      let shapePosition = position.subtract(origin).round()
+      drawRect(shapePosition, width, height, '#e00000')
     }
   }
 

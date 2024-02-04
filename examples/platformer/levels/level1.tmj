@@ -435,14 +435,14 @@
          "name":"ladders",
          "objects":[
                 {
-                 "height":64,
+                 "height":61,
                  "id":17,
                  "name":"",
                  "rotation":0,
                  "type":"",
                  "visible":true,
-                 "width":6,
-                 "x":325,
+                 "width":8,
+                 "x":324,
                  "y":96
                 }],
          "opacity":1,

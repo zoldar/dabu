@@ -233,10 +233,28 @@
 
       constructor(position) {
         super(position)
-        this.collisionShape = new BoundingBox(position, Point.at(5, 11), 22, 21)
-        this.hitShape = new BoundingBox(position, Point.at(9, 11), 14, 21)
+        this.collisionShape = new BoundingBox(position, Point.at(12, 12), 12, 20)
+        this.hitShape = new BoundingBox(position, Point.at(12, 12), 12, 20)
         this.hash = 'player'
         this.direction = Point.RIGHT
+      }
+
+      update() {
+        let xBoxOffset = this.turned == 'left' ? 8 : 12
+        if (this.climbing) xBoxOffset = 10
+        if (this.crouching) {
+          this.collisionShape.offset.y = 15
+          this.collisionShape.height = 17
+          this.hitShape.offset.y = 15
+          this.hitShape.height = 17
+        } else {
+          this.collisionShape.offset.y = 12
+          this.collisionShape.height = 20
+          this.hitShape.offset.y = 12
+          this.hitShape.height = 20
+        }
+        this.collisionShape.offset.x = xBoxOffset
+        this.hitShape.offset.x = xBoxOffset
       }
 
       updateAfter() {
@@ -390,23 +408,22 @@
 
       let hitLadders = Dabu.getCollisions(player, scene.getGroup('ladders'), 'hit').length > 0
       let staticPlatforms = scene.getGroup('static_platforms')
-      let hitStaticPlatforms = Dabu.getCollisions(player, staticPlatforms)
-
-      staticPlatforms.forEach(p => {
-        p.collides = p.collisionShape.position.y >= player.collisionShape.position.y + player.collisionShape.height
-      })
 
       if (!hitLadders) {
         player.collides = true
         player.climbing = false
       }
 
+      staticPlatforms.forEach(p => {
+        p.collides = p.collisionShape.position.y >= player.collisionShape.position.y + player.collisionShape.height
+      })
+
       if (ctx.keys.ArrowDown && ctx.keys[' ']) {
         let hitStaticPlatforms = Dabu.getCollisions(player, staticPlatforms, 'collision', { marginBottom: 2 })
         if (hitStaticPlatforms.length > 0) {
           hitStaticPlatforms[0].collides = false
         }
-        player.verticalVelocity += 8 * GRAVITY * secondsPassed
+        player.position.y += 2
         ctx.keys[' '] = false
       } else if (ctx.keys.ArrowUp && hitLadders) {
         player.verticalVelocity = -1 * CLIMB_SPEED
