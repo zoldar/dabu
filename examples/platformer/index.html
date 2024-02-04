@@ -33,12 +33,12 @@
     const HEIGHT = 240
     const CAMERA_HMARGIN = 100
     const CAMERA_VMARGIN = 90
-    const GRAVITY = 1200
+    const GRAVITY = 1100
     const JUMP_VELOCITY = 340
     const CLIMB_SPEED = 120
     const TILE_SIZE = 16
     const PLAYER_TILE_SIZE = 32
-    const MAX_VELOCITY = 150
+    const MAX_VELOCITY = 140
     const MAX_FALL_VELOCITY = 200
 
     let drawCollisionShapes = false
@@ -390,7 +390,7 @@
 
       let hitLadders = Dabu.getCollisions(player, scene.getGroup('ladders'), 'hit').length > 0
       let staticPlatforms = scene.getGroup('static_platforms')
-      let hitStaticPlatforms = Dabu.getCollisions(player, staticPlatforms, 'collision', { marginBottom: 2 })
+      let hitStaticPlatforms = Dabu.getCollisions(player, staticPlatforms)
 
       staticPlatforms.forEach(p => {
         p.collides = p.collisionShape.position.y >= player.collisionShape.position.y + player.collisionShape.height
@@ -402,9 +402,11 @@
       }
 
       if (ctx.keys.ArrowDown && ctx.keys[' ']) {
+        let hitStaticPlatforms = Dabu.getCollisions(player, staticPlatforms, 'collision', { marginBottom: 2 })
         if (hitStaticPlatforms.length > 0) {
           hitStaticPlatforms[0].collides = false
         }
+        player.verticalVelocity += 8 * GRAVITY * secondsPassed
         ctx.keys[' '] = false
       } else if (ctx.keys.ArrowUp && hitLadders) {
         player.verticalVelocity = -1 * CLIMB_SPEED
