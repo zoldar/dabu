@@ -230,6 +230,7 @@
 
       crouching = false
       climbing = false
+      jumping = false
 
       constructor(position) {
         super(position)
@@ -438,15 +439,17 @@
         player.climbing = false
       } else if (player.penetrationVector.y < 0) {
         player.verticalVelocity += 8 * GRAVITY * secondsPassed
-      } else if (!player.climbing && player.penetrationVector.y == 0 && player.verticalVelocity <= MAX_FALL_VELOCITY) {
-        player.verticalVelocity += GRAVITY * secondsPassed
-      } else if ((player.penetrationVector.y > 0 || player.climbing) && ctx.keys[' '] && !ctx.keys.ArrowDown) {
+      } else if (!player.jumping && (player.penetrationVector.y >= 0 || player.climbing) && player.verticalVelocity <= 120 && ctx.keys[' '] && !ctx.keys.ArrowDown) {
         player.verticalVelocity = -1 * JUMP_VELOCITY
         player.collides = true
         player.climbing = false
+        player.jumping = true
         ctx.keys[' '] = false
+      } else if (!player.climbing && player.penetrationVector.y == 0 && player.verticalVelocity <= MAX_FALL_VELOCITY) {
+        player.verticalVelocity += GRAVITY * secondsPassed
       } else if (player.climbing || player.penetrationVector.y > 0) {
         player.verticalVelocity = 0
+        player.jumping = false
       }
 
       if (player.verticalVelocity >= 0 && player.verticalVelocity < 80 &&
