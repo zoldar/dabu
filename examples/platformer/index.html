@@ -78,10 +78,6 @@
     loadPlayerSprite('player_jump_left_down', 2, 5)
     loadPlayerSprite('player_jump_left_up', 3, 5)
     loadPlayerSprite('player_jump_left', 2, 5, { count: 2, reversed: true })
-    loadEnvSprite('ground1', 1, 1)
-    loadEnvSprite('ground2', 3, 1)
-    loadEnvSprite('ground3', 5, 1)
-    loadEnvSprite('stone_small', 1, 20)
     Dabu.loadSprite('tileset', 'tileset', Point.at(0, 0), TILE_SIZE, TILE_SIZE, { count: Infinity })
 
     Dabu.loadJSON('level1', './levels/level1.tmj')
@@ -139,6 +135,91 @@
           null,
           new BoundingBox(Point.at(box.x, box.y), Point.at(0, 0), box.width, box.height)
         )
+      }
+    }
+
+    class VerticalPlatform extends DynamicEntity {
+      zindex = 2
+      mass = 2
+      topY
+      bottomY
+
+      constructor(box) {
+        super(Point.at(box.x, box.y))
+        this.topY = box.y
+        this.bottomY = box.y + box.height
+        this.collisionShape = new BoundingBox(this.position, Point.at(0, 0), box.width, 7)
+        this.hitShape = new BoundingBox(this.position, Point.at(0, -2), box.width, 2)
+        this.sprite = VerticalPlatform.spriteFunc(box.width)
+        this.direction = Point.DOWN
+        this.velocity = 50
+      }
+
+      updateAfter() {
+        super.updateAfter()
+
+        if (this.position.y >= this.bottomY) this.direction = Point.UP
+        else if (this.position.y <= this.topY) this.direction = Point.DOWN
+      }
+
+      static spriteFunc(width) {
+        let tileCount = Math.floor(width / TILE_SIZE)
+        let platformLeft = ctx.sprites['tileset'][85]
+        let platformMiddle = ctx.sprites['tileset'][133]
+        let platformRight = ctx.sprites['tileset'][134]
+
+        return position => {
+          for (let idx = 0; idx < tileCount; idx++) {
+            let sprite = platformMiddle
+            if (idx == 0) sprite = platformLeft
+            else if (idx == tileCount - 1) sprite = platformRight
+
+            ctx.gameContext.drawImage(sprite, position.x + idx * TILE_SIZE, position.y)
+          }
+        }
+      }
+    }
+
+    class HorizontalPlatform extends DynamicEntity {
+      zindex = 2
+      mass = 2
+      leftX
+      rightX
+
+      constructor(box, width) {
+        super(Point.at(box.x, box.y))
+        this.width = width
+        this.leftX = box.x
+        this.rightX = box.x + box.width - this.width
+        this.collisionShape = new BoundingBox(this.position, Point.at(0, 0), this.width, 7)
+        this.hitShape = new BoundingBox(this.position, Point.at(0, -2), this.width, 2)
+        this.sprite = HorizontalPlatform.spriteFunc(this.width)
+        this.direction = Point.RIGHT
+        this.velocity = 50
+      }
+
+      updateAfter() {
+        super.updateAfter()
+
+        if (this.position.x >= this.rightX) this.direction = Point.LEFT
+        else if (this.position.x <= this.leftX) this.direction = Point.RIGHT
+      }
+
+      static spriteFunc(width) {
+        let tileCount = Math.floor(width / TILE_SIZE)
+        let platformLeft = ctx.sprites['tileset'][85]
+        let platformMiddle = ctx.sprites['tileset'][133]
+        let platformRight = ctx.sprites['tileset'][134]
+
+        return position => {
+          for (let idx = 0; idx < tileCount; idx++) {
+            let sprite = platformMiddle
+            if (idx == 0) sprite = platformLeft
+            else if (idx == tileCount - 1) sprite = platformRight
+
+            ctx.gameContext.drawImage(sprite, position.x + idx * TILE_SIZE, position.y)
+          }
+        }
       }
     }
 
@@ -220,6 +301,7 @@
       zindex = 2
       kinetic = false
       turned = 'left'
+      gravity = GRAVITY
       verticalVelocity = 0
       horizontalVelocity = 0
       relativeVelocity = 0
@@ -329,6 +411,17 @@
         scene.add(new StaticPlatformBox(box), ['static_platforms'])
       })
 
+      let verticalPlatformLayer = json.layers.find(l => l.name == 'vertical_platforms')
+      verticalPlatformLayer.objects.forEach(box => {
+        scene.add(new VerticalPlatform(box), ['vertical_platforms'])
+      })
+
+      let horizontalPlatformLayer = json.layers.find(l => l.name == 'horizontal_platforms')
+      horizontalPlatformLayer.objects.forEach(box => {
+        let platformWidth = parseInt(box.properties.find(p => p.name == 'platform_width').value)
+        scene.add(new HorizontalPlatform(box, platformWidth), ['horizontal_platforms'])
+      })
+
       let ladderLayer = json.layers.find(l => l.name == 'ladders')
       ladderLayer.objects.forEach(box => {
         scene.add(new Ladder(box), ['ladders'])
@@ -364,7 +457,6 @@
 
       loadMap(scene, ctx.jsons.level1)
 
-      // scene.add(new Opossum(Point.at(120, (ctx.height / 2) + 4)), ['platforms'])
       scene.add(new Player(Point.at(ctx.width / 2 + 100, ctx.height / 2)))
 
       scene.cameraSubject = 'player'
@@ -438,7 +530,7 @@
         player.collides = true
         player.climbing = false
       } else if (player.penetrationVector.y < 0) {
-        player.verticalVelocity += 8 * GRAVITY * secondsPassed
+        player.verticalVelocity += 8 * player.gravity * secondsPassed
       } else if (!player.jumping && (player.penetrationVector.y >= 0 || player.climbing) && player.verticalVelocity <= 120 && ctx.keys[' '] && !ctx.keys.ArrowDown) {
         player.verticalVelocity = -1 * JUMP_VELOCITY
         player.collides = true
@@ -446,7 +538,7 @@
         player.jumping = true
         ctx.keys[' '] = false
       } else if (!player.climbing && player.penetrationVector.y == 0 && player.verticalVelocity <= MAX_FALL_VELOCITY) {
-        player.verticalVelocity += GRAVITY * secondsPassed
+        player.verticalVelocity += player.gravity * secondsPassed
       } else if (player.climbing || player.penetrationVector.y > 0) {
         player.verticalVelocity = 0
         player.jumping = false
@@ -467,10 +559,19 @@
 
       player.velocity = Point.at(player.horizontalVelocity, player.verticalVelocity).distance(Point.at(0, 0))
 
-      let platforms = Dabu.getCollisions(player, scene.getGroup('platforms'), 'hit', { marginBottom: 2 })
-      if (platforms.length > 0) {
-        player.relativeVelocity = platforms[0].velocity
-        player.relativeDirection = platforms[0].direction
+
+      let vPlatforms = Dabu.getCollisions(player, scene.getGroup('vertical_platforms'), 'hit', { marginBottom: 2 })
+      if (vPlatforms.length > 0 && vPlatforms[0].direction.equals(Point.DOWN)) {
+        player.position.y = vPlatforms[0].position.y - player.height + vPlatforms[0].velocity * secondsPassed
+        player.gravity = 0
+      } else {
+        player.gravity = GRAVITY
+      }
+
+      let hPlatforms = Dabu.getCollisions(player, scene.getGroup('horizontal_platforms'), 'hit', { marginBottom: 2 })
+      if (hPlatforms.length > 0) {
+        player.relativeVelocity = hPlatforms[0].velocity
+        player.relativeDirection = hPlatforms[0].direction
       } else {
         player.relativeVelocity = 0
         player.relativeDirection = Point.at(0, 0)
