@@ -47,6 +47,7 @@
     let backgroundSet = false
     let state = 'playing'
 
+    Dabu.loadFont('axones', '../../')
     Dabu.loadImage('background', 'back.png')
     Dabu.loadImage('tileset', 'tileset.png')
     Dabu.loadImage('player', 'player.png')
@@ -374,6 +375,7 @@
 
     function loadMenuScene(scene) {
       scene.reset('menu')
+      scene.add(new Text(Point.at(0, 75), 'axones', 'Press "Space" to play', { align: 'hcenter' }))
       backgroundSet = false
     }
 
@@ -457,7 +459,7 @@
 
       loadMap(scene, ctx.jsons.level1)
 
-      scene.add(new Player(Point.at(ctx.width / 2 + 100, ctx.height / 2)))
+      scene.add(new Player(Point.at(ctx.width / 2 + 100, ctx.height / 2 + 24)))
 
       scene.cameraSubject = 'player'
       scene.cameraMarginH = CAMERA_HMARGIN
