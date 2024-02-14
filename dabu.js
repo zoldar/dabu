@@ -798,6 +798,18 @@
       charset: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,;:?!"\'+-=*%_()',
       addWhitespace: true,
       spacing: [[4, " "], [8, "%"], [6, "MTWmw*"], [5, "ABCDGHKNOPQRSUVXYZabcdeghknopquvxyz023456789?_"], [4, "EFIJLfjrs1!\"+-="], [3, "t.,;:'()"], [2, "il"]]
+    },
+    tinyfont: {
+      file: 'assets/tinyfont.png',
+      width: 4,
+      height: 7,
+      charset: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ:;.,=+-/\\"*^%><?()[]&_|\'!{}$#@',
+      addWhitespace: true,
+      spacing: [
+        [4, ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ=+-/\\"*^%><?&_{}$#@'],
+        [2, ':;.,|\'!'],
+        [3, '()[]']
+      ]
     }
   }
 

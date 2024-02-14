@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jet Ski</title>
+  <link href="../../dabu.css" rel="stylesheet" />
+  <script src="../../dabu.js"></script>
+</head>
+
+<body>
+  <div id="stage"></div>
+  <script>
+    "use strict"
+
+    // library "imports"
+    const {
+      Point,
+      Sprite,
+      Scene,
+      BoundingBox,
+      DynamicEntity,
+      StaticEntity,
+      FixedEntity,
+      Text,
+      ctx
+    } = Dabu
+
+    const MAX_FPS = 15
+    const BG_COLOR = '#c7f0d8'
+    const COLOR = '#43523d'
+    const TILE_SIZE = 12
+    const WIDTH = 80
+    const HEIGHT = 48
+    const CAMERA_HMARGIN = (WIDTH - 10) / 2
+    const CAMERA_VMARGIN = (HEIGHT - 10) / 2
+    const TURN_SPEED = 180
+    const TOP_SPEED = 30
+    const ACCELERATION = 40
+    const DECELERATION = 40
+
+    const DIRECTIONS = {
+      n: Point.UP,
+      s: Point.DOWN,
+      w: Point.LEFT,
+      e: Point.RIGHT,
+      ne: Point.UP.add(Point.RIGHT).normalize(),
+      nw: Point.UP.add(Point.LEFT).normalize(),
+      se: Point.DOWN.add(Point.RIGHT).normalize(),
+      sw: Point.DOWN.add(Point.LEFT).normalize()
+    }
+
+    let state = 'playing'
+
+    Dabu.loadFont('tinyfont', '../../')
+    Dabu.loadImage('tileset', 'jetski.png')
+
+    function loadSprite(name, tileX, tileY, opts) {
+      opts = opts || {}
+      Dabu.loadSprite(name, 'tileset', Point.at(tileX, tileY).multiply(TILE_SIZE), TILE_SIZE, TILE_SIZE, opts)
+    }
+
+    loadSprite('boat_s', 0, 0)
+    loadSprite('boat_se', 1, 0)
+    loadSprite('boat_e', 2, 0)
+    loadSprite('boat_ne', 3, 0)
+    loadSprite('boat_n', 4, 0)
+    loadSprite('boat_nw', 5, 0)
+    loadSprite('boat_w', 6, 0)
+    loadSprite('boat_sw', 7, 0)
+    loadSprite('boat_shadow_s', 0, 1)
+    loadSprite('boat_shadow_se', 1, 1)
+    loadSprite('boat_shadow_e', 2, 1)
+    loadSprite('boat_shadow_ne', 3, 1)
+    loadSprite('boat_shadow_n', 4, 1)
+    loadSprite('boat_shadow_nw', 5, 1)
+    loadSprite('boat_shadow_w', 6, 1)
+    loadSprite('boat_shadow_sw', 7, 1)
+    loadSprite('skier_s', 0, 2)
+    loadSprite('skier_se', 1, 2)
+    loadSprite('skier_e', 2, 2)
+    loadSprite('skier_ne', 3, 2)
+    loadSprite('skier_n', 4, 2)
+    loadSprite('skier_nw', 5, 2)
+    loadSprite('skier_w', 6, 2)
+    loadSprite('skier_sw', 7, 2)
+    loadSprite('skier_shadow_s', 0, 3)
+    loadSprite('skier_shadow_se', 1, 3)
+    loadSprite('skier_shadow_e', 2, 3)
+    loadSprite('skier_shadow_ne', 3, 3)
+    loadSprite('skier_shadow_n', 4, 3)
+    loadSprite('skier_shadow_nw', 5, 3)
+    loadSprite('skier_shadow_w', 6, 3)
+    loadSprite('skier_shadow_sw', 7, 3)
+    loadSprite('ramp_s', 0, 4, { count: 2 })
+    loadSprite('ramp_n', 2, 4, { count: 2 })
+    loadSprite('ramp_e', 4, 4, { count: 2 })
+    loadSprite('ramp_w', 6, 4, { count: 2 })
+    loadSprite('mine', 8, 0, { count: 2 })
+    loadSprite('explosion', 8, 2, { count: 4 })
+    loadSprite('croc_w', 0, 5, { count: 2 })
+    loadSprite('croc_w_attack', 1, 5, { count: 2 })
+    loadSprite('croc_e', 3, 5, { count: 2 })
+    loadSprite('croc_e_attack', 4, 5, { count: 2 })
+    loadSprite('heart', 8, 1)
+    Dabu.loadSprite('tileset', 'tileset', Point.at(0, 0), TILE_SIZE, TILE_SIZE, { count: Infinity })
+
+    Dabu.loadJSON('level1', './level/level1.tmj')
+
+    class Player extends DynamicEntity {
+      zindex = 1
+      kinetic = false
+      visible = true
+      _angle
+
+      width = 10
+      height = 10
+
+      constructor(position) {
+        super(position)
+        this.hash = 'player'
+        this.collisionShape = new BoundingBox(position, Point.at(0, 0), 10, 10)
+        this.hitShape = new BoundingBox(position, Point.at(2, 2), 6, 6)
+        this.direction = Point.RIGHT
+        this.angle = 0
+      }
+
+      set angle(degrees) {
+        this._angle = degrees % 360
+        if (this._angle < 0) this._angle = this._angle + 360
+
+        if (this._angle >= 345 || this._angle <= 15) {
+          this.direction = DIRECTIONS.e
+        } else if (this._angle > 15 && this._angle < 75) {
+          this.direction = DIRECTIONS.se
+        } else if (this._angle >= 75 && this._angle <= 105) {
+          this.direction = DIRECTIONS.s
+        } else if (this._angle > 105 && this._angle < 165) {
+          this.direction = DIRECTIONS.sw
+        } else if (this._angle >= 165 && this._angle <= 195) {
+          this.direction = DIRECTIONS.w
+        } else if (this._angle > 195 && this._angle < 255) {
+          this.direction = DIRECTIONS.nw
+        } else if (this._angle >= 255 && this._angle <= 285) {
+          this.direction = DIRECTIONS.n
+        } else {
+          this.direction = DIRECTIONS.ne
+        }
+      }
+
+      get angle() {
+        return this._angle
+      }
+
+      updateAfter() {
+        super.updateAfter()
+        if (this.visible) {
+          boatSpriteUpdate(this)
+        } else {
+          this.sprite = null
+        }
+      }
+    }
+
+    function boatSpriteUpdate(e) {
+      let we = ''
+      if (e._direction.x > 0) we = 'e'
+      else if (e._direction.x < 0) we = 'w'
+
+      let ns = ''
+      if (e._direction.y > 0) ns = 's'
+      else if (e._direction.y < 0) ns = 'n'
+
+      let name = 'boat_' + ns + we
+
+      if (!e.sprite) {
+        e.sprite = new Sprite(name)
+      } else {
+        e.sprite.name = name
+      }
+    }
+
+    class MapBackground extends StaticEntity {
+      constructor(scene, map, zindex) {
+        super(Point.at(0, 0), MapBackground.spriteFunc(scene, map))
+        this.zindex = zindex
+      }
+
+      static spriteFunc(scene, map) {
+        return () => {
+          map.forEach(m => {
+            let p = m.position.subtract(scene.cameraOrigin)
+            ctx.gameContext.drawImage(m.sprite, p.x, p.y)
+          })
+        }
+      }
+    }
+
+    class Ramp extends StaticEntity {
+      constructor(position, direction) {
+        super(
+          position,
+          new Sprite('ramp_' + direction, 4),
+          null,
+          new BoundingBox(position, Point.at(0, 0), TILE_SIZE, TILE_SIZE)
+        )
+      }
+    }
+
+    class Mine extends StaticEntity {
+      constructor(position) {
+        super(
+          position,
+          new Sprite('mine', 2),
+          null,
+          new BoundingBox(position, Point.at(6, 7), 2, 2)
+        )
+      }
+    }
+
+    class Croc extends StaticEntity {
+      constructor(position, direction) {
+        super(
+          position,
+          new Sprite('croc_' + direction , 2),
+          null,
+          new BoundingBox(position, Point.at(7, 7), 6, 2)
+        )
+      }
+    }
+
+    class StaticCollisionBox extends StaticEntity {
+      constructor(box) {
+        super(
+          Point.at(box.x, box.y),
+          null,
+          new BoundingBox(Point.at(box.x, box.y), Point.at(0, 0), box.width, box.height)
+        )
+      }
+    }
+
+    function degreesToDirection(degrees) {
+      let radians = (Math.PI / 180) * degrees
+
+      return Point.at(
+        Math.round(Math.cos(radians), 5),
+        Math.round(Math.sin(radians), 5)
+      )
+    }
+
+    function loadMap(scene, json) {
+      let tileset = ctx.sprites.tileset
+
+      let landLayer = json.layers.find(l => l.name == 'land')
+      drawLayer(scene, tileset, landLayer, 1)
+
+      let treesLayer = json.layers.find(l => l.name == 'trees')
+      drawLayer(scene, tileset, treesLayer, 1)
+
+      let rampsLayer = json.layers.find(l => l.name == 'ramps')
+      spawnRamps(scene, rampsLayer)
+
+      let minesLayer = json.layers.find(l => l.name == 'mines')
+      spawnMines(scene, minesLayer)
+
+      let crocsLayer = json.layers.find(l => l.name == 'crocs')
+      spawnCrocs(scene, crocsLayer)
+
+      let collisionLayer = json.layers.find(l => l.name == 'collisions')
+      collisionLayer.objects.forEach(box => {
+        scene.add(new StaticCollisionBox(box))
+      })
+
+      let spawnLayer = json.layers.find(l => l.name == 'spawn')
+      let spawnPoint = spawnLayer.objects[0]
+
+      let player = new Player(Point.at(spawnPoint.x, spawnPoint.y))
+      player.direction = Point.RIGHT
+      scene.add(player)
+    }
+
+    function drawLayer(scene, tileset, layerData, zindex) {
+      let map = []
+
+      layerData.chunks.forEach(chunk => {
+        let { x: tileX, y: tileY, width, data } = chunk
+
+        data.forEach((tileId, idx) => {
+          if (tileId > 0) {
+            let tile = tileset[tileId - 1]
+            let relativeTileX = idx % width
+            let relativeTileY = Math.floor(idx / width)
+            let x = (tileX + relativeTileX) * TILE_SIZE
+            let y = (tileY + relativeTileY) * TILE_SIZE
+
+            map.push({ position: Point.at(x, y), sprite: tile })
+          }
+        })
+      })
+
+      scene.add(new MapBackground(scene, map, zindex))
+    }
+
+    function spawnRamps(scene, layerData) {
+      layerData.chunks.forEach(chunk => {
+        let { x: tileX, y: tileY, width, data } = chunk
+
+        data.forEach((tileId, idx) => {
+          if (tileId > 0) {
+            let direction
+            if ([65, 66].includes(tileId)) direction = 's'
+            else if ([67, 68].includes(tileId)) direction = 'n'
+            else if ([69, 70].includes(tileId)) direction = 'e'
+            else if ([71, 72].includes(tileId)) direction = 'w'
+            let relativeTileX = idx % width
+            let relativeTileY = Math.floor(idx / width)
+            let x = (tileX + relativeTileX) * TILE_SIZE
+            let y = (tileY + relativeTileY) * TILE_SIZE
+
+            scene.add(new Ramp(Point.at(x, y), direction))
+          }
+        })
+      })
+    }
+
+    function spawnMines(scene, layerData) {
+      layerData.chunks.forEach(chunk => {
+        let { x: tileX, y: tileY, width, data } = chunk
+
+        data.forEach((tileId, idx) => {
+          if (tileId > 0) {
+            let relativeTileX = idx % width
+            let relativeTileY = Math.floor(idx / width)
+            let x = (tileX + relativeTileX) * TILE_SIZE
+            let y = (tileY + relativeTileY) * TILE_SIZE
+
+            scene.add(new Mine(Point.at(x, y)))
+          }
+        })
+      })
+    }
+
+    function spawnCrocs(scene, layerData) {
+      layerData.chunks.forEach(chunk => {
+        let { x: tileX, y: tileY, width, data } = chunk
+
+        data.forEach((tileId, idx) => {
+          if (tileId > 0) {
+            let direction = tileId >= 84 ? 'e' : 'w'
+            let relativeTileX = idx % width
+            let relativeTileY = Math.floor(idx / width)
+            let x = (tileX + relativeTileX) * TILE_SIZE
+            let y = (tileY + relativeTileY) * TILE_SIZE
+
+            scene.add(new Croc(Point.at(x, y), direction))
+          }
+        })
+      })
+    }
+
+    function loadMenuScene(scene) {
+      ctx.bgContext.fillStyle = BG_COLOR
+      ctx.bgContext.fillRect(0, 0, WIDTH, HEIGHT)
+
+      scene.reset('menu')
+
+      scene.add(new Text(Point.at(0, -4), 'tinyfont', 'PRESS "SPACE"', { align: 'hcenter vcenter' }))
+      scene.add(new Text(Point.at(0, 4), 'tinyfont', 'TO PLAY', { align: 'hcenter vcenter' }))
+    }
+
+    function renderMenuScene(scene) {
+      if (ctx.keys[' ']) {
+        loadGameScene(scene)
+        ctx.keys[' '] = false
+      }
+    }
+
+    function loadGameScene(scene) {
+      ctx.bgContext.fillStyle = BG_COLOR
+      ctx.bgContext.fillRect(0, 0, WIDTH, HEIGHT)
+
+      scene.reset('game')
+
+      loadMap(scene, ctx.jsons.level1)
+
+      scene.cameraSubject = 'player'
+      scene.cameraMarginH = CAMERA_HMARGIN
+      scene.cameraMarginV = CAMERA_VMARGIN
+
+      state = 'playing'
+    }
+
+    function renderGameScene(scene, secondsPassed) {
+      if (state != 'playing') {
+        ctx.keys = {}
+      }
+
+      if (ctx.keys.Escape) {
+        loadMenuScene(scene)
+        ctx.keys.Escape = false
+        return
+      }
+
+      let { player } = scene.entities
+
+      if (ctx.keys.ArrowLeft) player.angle = player.angle - TURN_SPEED * secondsPassed
+      if (ctx.keys.ArrowRight) player.angle = player.angle + TURN_SPEED * secondsPassed
+
+      if (ctx.keys.ArrowUp && player.velocity < TOP_SPEED) {
+        player.velocity = player.velocity + ACCELERATION * secondsPassed
+
+        if (player.velocity > TOP_SPEED) player.velocity = TOP_SPEED
+
+      } else if (player.velocity > 0) {
+        player.velocity = player.velocity - DECELERATION * secondsPassed
+
+        if (player.velocity < 0) player.velocity = 0
+      }
+
+      player.position = player.position.add(player.direction.multiply(player.velocity * secondsPassed))
+    }
+
+    Dabu.init('stage', WIDTH, HEIGHT)
+
+    Dabu.load(
+      () => {
+        let scene = new Scene()
+
+        loadMenuScene(scene)
+
+        return scene
+      },
+      (scene, secondsPassed) => {
+        if (scene.name == 'game') {
+          renderGameScene(scene, secondsPassed)
+        } else {
+          renderMenuScene(scene, secondsPassed)
+        }
+
+        Dabu.runPhysics(scene, secondsPassed)
+        Dabu.drawScene(scene, {
+          pixelPerfectMovement: true,
+          smoothDiagonalMovement: true
+        })
+      },
+      { maxFPS: MAX_FPS }
+    )
+  </script>
+</body>
+
+</html>

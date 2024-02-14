@@ -9,11 +9,11 @@
     ],
     "fileStates": {
         "level1.tmj": {
-            "scale": 7.811,
-            "selectedLayer": 5,
+            "scale": 1.4695,
+            "selectedLayer": 7,
             "viewCenter": {
-                "x": 313.7242350531302,
-                "y": 120.08705671488927
+                "x": 193.26301463082677,
+                "y": 238.5165022116366
             }
         },
         "level1.tmx": {
@@ -25,7 +25,7 @@
             }
         },
         "tileset.tsx": {
-            "scaleInDock": 2,
+            "scaleInDock": 1.5432,
             "scaleInEditor": 1
         }
     },
@@ -42,8 +42,8 @@
     ],
     "project": "platformer.tiled-project",
     "recentFiles": [
-        "level1.tmj",
         "tileset.tsx",
+        "level1.tmj",
         "level1.tmx"
     ],
     "tileset.lastUsedFormat": "tsx",

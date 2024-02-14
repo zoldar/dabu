@@ -1,0 +1,46 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "level1.tmj",
+    "expandedProjectPaths": [
+        "."
+    ],
+    "fileStates": {
+        "/Users/zoldar/Work/personal/dabu/examples/platformer/levels/tileset.tsx": {
+            "scaleInDock": 1
+        },
+        "jetski.tsx": {
+            "scaleInDock": 4.1491,
+            "scaleInEditor": 1
+        },
+        "level1.tmj": {
+            "scale": 3.5188,
+            "selectedLayer": 2,
+            "viewCenter": {
+                "x": 51.58008411958621,
+                "y": 40.07047857224053
+            }
+        }
+    },
+    "last.imagePath": "/Users/zoldar/Work/personal/dabu/examples/jetski",
+    "map.fixedSize": false,
+    "map.lastUsedFormat": "json",
+    "map.tileHeight": 12,
+    "map.tileWidth": 12,
+    "openFiles": [
+        "jetski.tsx",
+        "level1.tmj"
+    ],
+    "project": "jetski.tiled-project",
+    "recentFiles": [
+        "jetski.tsx",
+        "level1.tmj"
+    ],
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.tileSize": {
+        "height": 12,
+        "width": 12
+    }
+}
