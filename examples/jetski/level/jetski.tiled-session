@@ -3,7 +3,7 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "level1.tmj",
+    "activeFile": "jetski.tsx",
     "expandedProjectPaths": [
         "."
     ],
@@ -16,11 +16,11 @@
             "scaleInEditor": 1
         },
         "level1.tmj": {
-            "scale": 3.5188,
-            "selectedLayer": 2,
+            "scale": 4,
+            "selectedLayer": 5,
             "viewCenter": {
-                "x": 51.58008411958621,
-                "y": 40.07047857224053
+                "x": 121.125,
+                "y": 67.375
             }
         }
     },
@@ -35,8 +35,8 @@
     ],
     "project": "jetski.tiled-project",
     "recentFiles": [
-        "jetski.tsx",
-        "level1.tmj"
+        "level1.tmj",
+        "jetski.tsx"
     ],
     "tileset.lastUsedFormat": "tsx",
     "tileset.tileSize": {
