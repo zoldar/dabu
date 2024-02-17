@@ -19,6 +19,8 @@
   <script>
     "use strict"
 
+    let { mat4 } = glMatrix
+
     // initiating GL canvas
     let canvas = document.getElementById('stage')
     canvas.width = window.innerWidth
@@ -165,10 +167,10 @@
       matrix: gl.getUniformLocation(program, 'matrix')
     }
 
-    let modelMatrix = glMatrix.mat4.create()
-    let viewMatrix = glMatrix.mat4.create()
-    let projectionMatrix = glMatrix.mat4.create()
-    glMatrix.mat4.perspective(projectionMatrix,
+    let modelMatrix = mat4.create()
+    let viewMatrix = mat4.create()
+    let projectionMatrix = mat4.create()
+    mat4.perspective(projectionMatrix,
       // vertical field of view (angle in radians)
       75 * Math.PI / 180,
       // aspect ratio
@@ -179,26 +181,26 @@
       1e4
     )
 
-    let modelViewMatrix = glMatrix.mat4.create()
-    let finalMatrix = glMatrix.mat4.create()
+    let modelViewMatrix = mat4.create()
+    let finalMatrix = mat4.create()
 
     // translating should be first as matrix operations
     // are applied in reverse order when rendering, so scaling
     // would affect translation
-    glMatrix.mat4.translate(modelMatrix, modelMatrix, [-1.5, 0, -2])
-    // glMatrix.mat4.scale(modelMatrix, modelMatrix, [.25, .25, .25])
+    mat4.translate(modelMatrix, modelMatrix, [-1.5, 0, -2])
+    // mat4.scale(modelMatrix, modelMatrix, [.25, .25, .25])
 
-    glMatrix.mat4.translate(viewMatrix, viewMatrix, [-3, 0, 1])
-    glMatrix.mat4.invert(viewMatrix, viewMatrix)
+    mat4.translate(viewMatrix, viewMatrix, [-3, 0, 1])
+    mat4.invert(viewMatrix, viewMatrix)
 
     function animate() {
       requestAnimationFrame(animate)
 
-      // glMatrix.mat4.rotateX(modelMatrix, modelMatrix, Math.PI / 2 / 70)
-      // glMatrix.mat4.rotateZ(modelMatrix, modelMatrix, Math.PI / 2 / 70)
+      // mat4.rotateX(modelMatrix, modelMatrix, Math.PI / 2 / 70)
+      // mat4.rotateZ(modelMatrix, modelMatrix, Math.PI / 2 / 70)
 
-      glMatrix.mat4.multiply(modelViewMatrix, viewMatrix, modelMatrix)
-      glMatrix.mat4.multiply(finalMatrix, projectionMatrix, modelViewMatrix)
+      mat4.multiply(modelViewMatrix, viewMatrix, modelMatrix)
+      mat4.multiply(finalMatrix, projectionMatrix, modelViewMatrix)
 
       gl.uniformMatrix4fv(uniformLocations.matrix, false, finalMatrix)
       // draw the triangle using first 3 vertices
